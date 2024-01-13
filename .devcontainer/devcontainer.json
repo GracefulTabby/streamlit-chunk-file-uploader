@@ -1,0 +1,39 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "Streamlit.CreateChunkDownloadComponentsProject",
+    // "image": "mcr.microsoft.com/vscode/devcontainers/base:bullseye",
+    "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bullseye",
+    "init": true,
+	// all in one container image 
+	// https://pc.atsuhiro-me.net/entry/2023/04/12/005150
+	"features": {
+        // "ghcr.io/devcontainers/features/rust:1": {
+        //     "version": "1.63",
+        //     "profile": "minimal"
+        // },
+        // "ghcr.io/devcontainers/features/python:1": {
+        //     "installTools": true,
+        //     "version": "3.11"
+        // },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "18"
+        }
+        // "ghcr.io/devcontainers/features/common-utils:2": {
+        //     "installZsh": true,
+        //     "installOhMyZsh": true,
+        //     "upgradePackages": true,
+        //     "username": "root",
+        //     "userUid": "automatic",
+        //     "userGid": "automatic"
+        // }
+    },
+    "mounts": [
+        "source=nv-proj,target=${containerWorkspaceFolder}/streamlit_chunk_file_uploader/frontend/node_modules,type=volume"
+      ],
+	"forwardPorts": [8501,3001],
+	"postCreateCommand": "pip3 install --user -r requirements.txt",
+	"customizations": {},
+    // "remoteUser": "vscode"
+	"remoteUser": "root"
+}

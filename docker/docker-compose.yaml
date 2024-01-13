@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  streamlit_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "8501"
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+      - "10443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./certs/server.crt:/etc/nginx/certs/server.crt
+      - ./certs/server.key:/etc/nginx/certs/server.key
+    depends_on:
+      - streamlit_app

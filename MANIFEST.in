@@ -1,0 +1,1 @@
+recursive-include streamlit_chunk_file_uploader/frontend/build *
