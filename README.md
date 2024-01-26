@@ -27,7 +27,6 @@ if file is not None:
 ```
 
 ## About chunk size
-When a file is uploaded, the Python script slices it on the browser side with the specified chunk size and sends it as a binary string through setComponentValue.  
-In addition to the binary string, setComponentValue also transmits information such as upload mode, file name, and file size to be received by the backend.  
-Therefore, it is important to note that the chunk size and the size of the request may differ.  
-In cases where there are constraints such as client_max_body_size, it is necessary to set a value slightly smaller than the constraint size, for example, setting it to 31MB if the constraint is 32MB.
+When a file is uploaded, a Python script slices the file at the specified chunk size on the browser side and sends it as multiple files to the backend.  
+It's important to note that chunk size and request size are different.  
+If you have a constraint such as client_max_body_size, you should set it to a value slightly smaller than the constraint size, such as 31MB if the constraint size is 32MB.  

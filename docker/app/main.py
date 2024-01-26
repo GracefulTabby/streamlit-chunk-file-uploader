@@ -4,7 +4,8 @@ from streamlit_chunk_file_uploader import uploader
 st.subheader("Streamlit Chunk File Uploader.")
 
 st.subheader("ChunkUploader")
-file = uploader("World", key="chunk_uploader", chunk_size=32)
+# chunk_size should be set slightly smaller than client_max_body_size.
+file = uploader("World", key="chunk_uploader", chunk_size=31)
 st.write(file)
 if file is not None:
     st.download_button(

@@ -18,8 +18,7 @@ RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # Install additional wheel file
-COPY streamlit_chunk_file_uploader-0.0.1-py3-none-any.whl /app/
-RUN pip install streamlit_chunk_file_uploader-0.0.1-py3-none-any.whl
+RUN pip install streamlit-chunk-file-uploader
 
 # Copy the Streamlit app
 COPY app /app

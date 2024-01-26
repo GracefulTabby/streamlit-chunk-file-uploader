@@ -1,6 +1,6 @@
 import os
 import streamlit.components.v1 as components
-import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 from typing import (
     List,
     Any,
@@ -10,10 +10,14 @@ from typing import (
     Sequence,
     Callable,
     Tuple,
+    TYPE_CHECKING,
 )
 from typing_extensions import Literal
 from ._models import UploadedFile, ChunkUploaderReturnValue
-from ._utils import combine_chunks
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+
+if TYPE_CHECKING:
+    from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 
 # Create a _RELEASE constant. We'll set this to False while we're developing
 # the component, and True when we're ready to package and distribute it.
@@ -31,6 +35,46 @@ else:
     parent_dir = os.path.dirname(os.path.abspath(__file__))
     build_dir = os.path.join(parent_dir, "frontend/build")
     _component_func = components.declare_component(COMPONENT_NAME, path=build_dir)
+
+
+# @st.cache_data(show_spinner="Retrieving uploaded data...") # ** Memory hog **
+# TODO : Do you have cache_data?
+def __get_files_from_file_storage(
+    rv: ChunkUploaderReturnValue,
+) -> Optional[UploadedFile]:
+    # ファイルidがない場合には進ませない
+    if rv.file_id is None:
+        return None
+    # コンテキストを取得
+    ctx = get_script_run_ctx()
+    session_id = ctx.session_id
+    # streamlitのアップロードマネージャを取得
+    uploaded_file_mgr: "MemoryUploadedFileManager" = ctx.uploaded_file_mgr
+    # session_idに紐づくファイルデータを取得
+    file_storage: Dict[str, UploadedFileRec] = uploaded_file_mgr.file_storage.get(
+        session_id, {}
+    )
+    # マルチパートの場合には{uuid}.{chunk_id}のようになるため、取得する
+    file_ids = [k for k in file_storage.keys() if k.startswith(rv.file_id)]
+    if len(file_ids) > 1:
+        # ファイル件数が合わない場合には例外
+        if rv.total_chunks != len(file_ids):
+            raise Exception("アップロード失敗！！")
+        sorted_file_ids = list(sorted(file_ids, key=lambda x: x.split(".")[1]))
+        combined_bytes = b""
+        for file_id in sorted_file_ids:
+            record = uploaded_file_mgr.get_files(session_id, file_ids=[file_id])[0]
+            combined_bytes += record.data
+            uploaded_file_mgr.remove_file(session_id, file_id)
+        if len(combined_bytes) != rv.file_size:
+            raise Exception("ファイルサイズが違う！！！")
+        # 登録する
+        combined_file = UploadedFileRec(rv.file_id, rv.file_name, rv.file_type, combined_bytes)
+        uploaded_file_mgr.add_file(session_id, combined_file)
+        del combined_bytes, combined_file
+    # ファイルを取得する    
+    record = uploaded_file_mgr.get_files(session_id, [rv.file_id])[0]
+    return UploadedFile(record)
 
 
 def uploader(
@@ -84,11 +128,10 @@ def uploader(
     Optional[UploadedFile]
         The uploaded file object or None if no file is uploaded.
     """
-    # session_stateのキーを作成
-    FILE_TEMP_STATE_KEY = f"{key}__temp_storage"
-    RECV_NOW_FLG_KEY = f"{key}__recv_now_flg"
-    FILE_STORAGE_KEY = f"{key}__file"
-
+    ctx = get_script_run_ctx()
+    session_id = ctx.session_id
+    uploaded_file_mgr: MemoryUploadedFileManager = ctx.uploaded_file_mgr
+    endpoint = uploaded_file_mgr.endpoint
     # コンポーネントからファイルを受け取る
     component_value = _component_func(
         label=label,
@@ -99,66 +142,22 @@ def uploader(
         disabled=disabled,
         label_visibility=label_visibility,
         default=0,
+        session_id=session_id,
+        endpoint=endpoint,
     )
     rv = ChunkUploaderReturnValue.from_component_value(component_value)
     # アップロードされていない場合等はNoneを受け取る
     if rv is None:
-        return st.session_state.get(FILE_STORAGE_KEY)
-    # クリアが指定されている場合には、ファイルをクリアする
-    if rv.is_file_clear():
-        st.session_state.pop(FILE_TEMP_STATE_KEY, None)
-        st.session_state.pop(RECV_NOW_FLG_KEY, None)
-        st.session_state.pop(FILE_STORAGE_KEY, None)
+        return None
 
     def __call_on_change():
         # TODO: ファイルが変化したときにのみ実行するように実装する
         # TODO: ファイルハッシュで比較するか
+        # prev:hash
         if on_change is not None:
             on_change(
                 *(args if args is not None else ()),
                 **(kwargs if kwargs is not None else {}),
             )
 
-    # モード別に処理(singlepart/multipart)
-    if rv.mode == "singlepart":
-        # __call_on_change()
-        st.session_state[FILE_STORAGE_KEY] = UploadedFile(
-            rv.data.encode("latin-1"),
-            rv.file_name,
-            os.path.splitext(rv.file_name)[-1].replace(".", ""),
-        )
-    elif rv.mode == "multipart":
-        if rv.chunk_index == -1:
-            # -1は送信の始まり
-            st.session_state[RECV_NOW_FLG_KEY] = True
-            st.session_state.pop(FILE_STORAGE_KEY, None)
-            st.session_state.pop(FILE_TEMP_STATE_KEY, None)
-        if FILE_TEMP_STATE_KEY not in st.session_state:
-            st.session_state[FILE_TEMP_STATE_KEY] = {}
-        # データを格納
-        if (
-            rv.data is not None
-            and rv.chunk_index not in st.session_state[FILE_TEMP_STATE_KEY]
-        ):
-            st.session_state[FILE_TEMP_STATE_KEY][rv.chunk_index] = rv.data
-        # すべてのチャンクがそろったら結合してファイル化する
-        if len(st.session_state[FILE_TEMP_STATE_KEY]) == rv.total_chunks:
-            data = combine_chunks(st.session_state[FILE_TEMP_STATE_KEY])
-            st.session_state[FILE_STORAGE_KEY] = UploadedFile(
-                data,
-                rv.file_name,
-                os.path.splitext(rv.file_name)[-1].replace(".", ""),
-            )
-            st.session_state.pop(FILE_TEMP_STATE_KEY, None)
-            st.session_state[RECV_NOW_FLG_KEY] = False
-            st.session_state.pop(key,None)
-            # __call_on_change()
-        if show_progress and st.session_state[RECV_NOW_FLG_KEY]:
-            now_length = len(st.session_state.get(FILE_TEMP_STATE_KEY,""))
-            progress = now_length / rv.total_chunks
-            if progress:
-                st.progress(progress, "アップロードされたファイルを処理しています、しばらくお待ちください...")
-    else:
-        pass
-
-    return st.session_state.get(FILE_STORAGE_KEY)
+    return __get_files_from_file_storage(rv)

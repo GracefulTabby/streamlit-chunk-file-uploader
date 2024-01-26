@@ -6,10 +6,9 @@ st.subheader("Streamlit Chunk File Uploader.")
 st.subheader("ChunkUploader")
 file = uploader(
     "World",
-    uploader_msg="CSVファイルをアップロードしてください",
+    uploader_msg="Please upload the file.",
     key="chunk_uploader",
-    chunk_size=16,
-    on_change=lambda:st.write("upload")
+    chunk_size=32,
 )
 st.write(file)
 if file is not None:
@@ -30,3 +29,7 @@ if file_2 is not None:
         data=file_2,
         type="primary",
     )
+
+count = st.session_state.get("count", 0)
+st.subheader(f"rerun count: {count}")
+st.session_state["count"] = count + 1
