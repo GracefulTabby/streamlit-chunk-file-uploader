@@ -7,7 +7,6 @@ import {
 import { MdOutlineCloudUpload } from 'react-icons/md'
 import { RxCross2 } from "react-icons/rx";
 import { FaRegFile } from 'react-icons/fa';
-// import './file_uploader.css'
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 
@@ -104,6 +103,7 @@ class FileUploader extends StreamlitComponentBase<State> {
       //   borderColor: theme?.primaryColor,
       // },
     };
+    const fileInputRef = React.createRef<HTMLInputElement>();
     return (
       <main style={{ font: theme?.font }}>
         {labelVisibility !== "collapsed" && (
@@ -111,10 +111,7 @@ class FileUploader extends StreamlitComponentBase<State> {
         )}
         <form style={form_style}
           onClick={() => {
-            const inputField = document.querySelector(".input-field") as HTMLInputElement;
-            if (inputField) {
-              inputField.click();
-            }
+            fileInputRef.current?.click();
           }}
           onDragOver={(e) => this.onDragOver(e)}
           onDrop={(e) => this.onDrop(e)}
@@ -123,7 +120,7 @@ class FileUploader extends StreamlitComponentBase<State> {
             type="file"
             accept="*.*"
             className='input-field'
-            ref={(input) => { this.fileInput = input; }} 
+            ref={fileInputRef}
             hidden
             onChange={this.onFileChange}
             disabled={this.props.disabled || this.state.uploading}
@@ -145,14 +142,8 @@ class FileUploader extends StreamlitComponentBase<State> {
               }}>File size limit: {1024}MB</small>
             </div>
           </div>
-          <button style={browse_btn_style}
+          <button type="button" style={browse_btn_style}
             disabled={this.props.disabled || this.state.uploading}
-            onClick={() => {
-              const inputField = document.querySelector(".input-field") as HTMLInputElement;
-              if (inputField) {
-                inputField.click();
-              }
-            }}
           >
             Browse files
           </button>
