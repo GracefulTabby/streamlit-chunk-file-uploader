@@ -25,6 +25,7 @@ interface State {
   loadedChunks: number;
   uploading: boolean;
   buttonHover: boolean;
+  deleteButtonHover: boolean;
 }
 
 function getCookie(name: string): string {
@@ -41,7 +42,7 @@ function getCookie(name: string): string {
   return '';
 }
 
-function hexToRgb(hex: string) : { r: number, g: number, b: number } {
+function hexToRgb(hex: string): { r: number, g: number, b: number } {
   // #を削除する
   hex = hex.replace(/^#/, '');
 
@@ -55,6 +56,16 @@ function hexToRgb(hex: string) : { r: number, g: number, b: number } {
   return { r: r, g: g, b: b };
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const formattedSize = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
+  return `${formattedSize}${sizes[i]}`;
+}
+
+
 class FileUploader extends StreamlitComponentBase<State> {
   public state: State = {
     file: null,
@@ -62,6 +73,7 @@ class FileUploader extends StreamlitComponentBase<State> {
     loadedChunks: 0,
     uploading: false,
     buttonHover: false,
+    deleteButtonHover: false,
   };
 
   private readonly DEFAULT_CHUNK_SIZE_MB = 32;
@@ -117,16 +129,42 @@ class FileUploader extends StreamlitComponentBase<State> {
     };
     if (this.state.buttonHover) {
       // ホバー時のスタイルを適用
-      browse_btn_style.border= `1px solid ${theme?.primaryColor}`;
+      browse_btn_style.border = `1px solid ${theme?.primaryColor}`;
       browse_btn_style.color = theme?.primaryColor;
-    } else{
+    } else {
       // hexからrgb値に変換し、透明度を0.6にする
       const hex = theme?.textColor as string;
       console.log(hexToRgb(hex))
       const { r, g, b } = hexToRgb(hex);
-      browse_btn_style.border= `1px solid rgba(${r}, ${g}, ${b}, 0.2)`;
+      browse_btn_style.border = `1px solid rgba(${r}, ${g}, ${b}, 0.2)`;
       browse_btn_style.color = theme?.textColor;
     }
+
+    const delete_btn_style: React.CSSProperties = {
+      display: "inline-flex",
+      WebkitBoxAlign: "center",
+      alignItems: "center",
+      WebkitBoxPack: "center",
+      justifyContent: "center",
+      fontWeight: 400,
+      borderRadius: "0.5rem",
+      minHeight: "38.4px",
+      margin: "0px",
+      lineHeight: "1.6",
+      width: "auto",
+      userSelect: "none",
+      backgroundColor: "transparent",
+      border: "none",
+      boxShadow: "none",
+      padding: "0px",
+      cursor: "pointer",
+    };
+    if (this.state.deleteButtonHover) {
+      // ホバー時のスタイルを適用
+      delete_btn_style.color = theme?.primaryColor;
+    } else {
+      delete_btn_style.color = theme?.textColor;
+    };
 
     const fileInputRef = React.createRef<HTMLInputElement>();
     return (
@@ -178,21 +216,65 @@ class FileUploader extends StreamlitComponentBase<State> {
         {this.state.uploading && (
           <p>Uploading {this.state.loadedChunks} out of {this.getTotalChunks()} chunks...</p>
         )}
-        {!this.state.uploading && this.state.loadedChunks > 0 && this.state.loadedChunks === this.getTotalChunks() && (
-          <p>Upload completed!</p>
-        )}
         {this.state.file && (
-          <section className='uploaded-row'>
-            <FaRegFile size='1.5em' />
-            <span className='upload-content'>
-              {this.getFileName()}
-            </span>
-            <RxCross2 size='1em'
-              onClick={() => {
-                this.onClickUploadedFileDelete()
-              }}
-            />
-          </section>
+          <div style={{
+            left: 0,
+            right: 0,
+            lineHeight: 1.25,
+            paddingTop: "0.75rem",
+            paddingLeft: "1rem",
+            paddingRight: "1rem",
+          }}>
+            <div style={{
+              display: "flex",
+              WebkitBoxAlign: "center",
+              alignItems: "center",
+              marginBottom: "0.25rem",
+            }}>
+
+              <div style={{
+                display: "flex",
+                padding: "0.25rem",
+                color: theme?.textColor,
+                opacity: 0.6,
+              }}>
+                <FaRegFile size='1.8rem' />
+              </div>
+
+              <div style={{
+                display: "flex",
+                WebkitBoxAlign: "baseline",
+                alignItems: "baseline",
+                flex: "1 1 0%",
+                paddingLeft: "1rem",
+                overflow: "hidden",
+              }}>
+                <div style={{
+                  marginRight: "0.5rem",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap"
+                }}>
+                  {this.state.file.name}
+                </div>
+                <small style={{ opacity: 0.6, lineHeight: 1.25 }}>
+                  {formatBytes(this.state.file.size)}
+                </small>
+              </div>
+
+              <div>
+                <button type="button"
+                  style={delete_btn_style}
+                  onClick={() => {
+                    this.onClickUploadedFileDelete();
+                    this.setState({ deleteButtonHover: false });
+                  }}
+                  onMouseEnter={() => this.setState({ deleteButtonHover: true })}
+                  onMouseLeave={() => this.setState({ deleteButtonHover: false })}
+                ><RxCross2 size='1.25rem' /></button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     );
