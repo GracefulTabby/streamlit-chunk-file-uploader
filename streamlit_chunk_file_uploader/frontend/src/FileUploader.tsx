@@ -4,10 +4,10 @@ import {
   StreamlitComponentBase,
   withStreamlitConnection,
 } from "streamlit-component-lib";
-import { MdCloudUpload } from 'react-icons/md'
+import { MdOutlineCloudUpload } from 'react-icons/md'
 import { RxCross2 } from "react-icons/rx";
 import { FaRegFile } from 'react-icons/fa';
-import './file_uploader.css'
+// import './file_uploader.css'
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 
@@ -53,18 +53,63 @@ class FileUploader extends StreamlitComponentBase<State> {
 
   public render = (): ReactNode => {
     const { theme } = this.props;
-    const style: React.CSSProperties = {};
-    if (theme) {
-      const borderStyling = `1px solid ${this.state.file ? theme.primaryColor : "gray"
-        }`;
-      style.border = borderStyling;
-      style.outline = borderStyling;
-    }
-    // チャンクサイズを受け取り、計算する
+    const label = this.props.args["label"]
     const uploadMessage = (this.props.args["uploader_msg"] || "Browse Files to upload.")
+    // ラベルの表示を設定する
+    const labelVisibility = this.props.args["label_visibility"];
+    const label_style: React.CSSProperties = {
+      visibility: labelVisibility === "visible" ? "visible" : "hidden",
+      fontSize: "14px",
+      display: "flex",
+      marginBottom: "0.25rem",
+      height: "auto",
+      minHeight: "1.5rem",
+      verticalAlign: "middle",
+      flexDirection: "row",
+      WebkitBoxAlign: "center",
+      alignItems: "center",
+      color: theme?.textColor,
+    };
+    // formのstyle()
+    const form_style: React.CSSProperties = {
+      display: "flex",
+      WebkitBoxAlign: "center",
+      alignItems: "center",
+      padding: "1rem",
+      borderRadius: "0.5rem",
+      cursor: "pointer",
+      color: theme?.textColor,
+      backgroundColor: theme?.secondaryBackgroundColor,
+    };
+    // buttonのstyle
+    const browse_btn_style: React.CSSProperties = {
+      display: "inline-flex",
+      WebkitBoxAlign: "center",
+      alignItems: "center",
+      WebkitBoxPack: "center",
+      justifyContent: "center",
+      fontWeight: 400,
+      padding: "0.25rem 0.75rem",
+      borderRadius: "0.5rem",
+      minHeight: "38.4px",
+      margin: "0px",
+      lineHeight: "1.6",
+      color: "inherit",
+      width: "auto",
+      userSelect: "none",
+      backgroundColor: theme?.backgroundColor,
+      border: `1px solid ${theme?.primaryColor}`,
+      // "&:hover": {
+      //   color: theme?.primaryColor,
+      //   borderColor: theme?.primaryColor,
+      // },
+    };
     return (
-      <main>
-        <form
+      <main style={{ font: theme?.font }}>
+        {labelVisibility !== "collapsed" && (
+          <p style={label_style}>{label}</p>
+        )}
+        <form style={form_style}
           onClick={() => {
             const inputField = document.querySelector(".input-field") as HTMLInputElement;
             if (inputField) {
@@ -78,19 +123,46 @@ class FileUploader extends StreamlitComponentBase<State> {
             type="file"
             accept="*.*"
             className='input-field'
+            ref={(input) => { this.fileInput = input; }} 
             hidden
             onChange={this.onFileChange}
             disabled={this.props.disabled || this.state.uploading}
           />
-          <MdCloudUpload color='#1475cf' size={60} />
-          <p>{uploadMessage}</p>
-          {this.state.uploading && (
-            <p>Uploading {this.state.loadedChunks} out of {this.getTotalChunks()} chunks...</p>
-          )}
-          {!this.state.uploading && this.state.loadedChunks > 0 && this.state.loadedChunks === this.getTotalChunks() && (
-            <p>Upload completed!</p>
-          )}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            WebkitBoxAlign: "center",
+            marginRight: "auto",
+          }}>
+            <span style={{ marginRight: "1rem", color: theme?.textColor, opacity: 0.6, }}>
+              <MdOutlineCloudUpload size={36} />
+            </span>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ marginBottom: "0.25rem" }}>{uploadMessage}</span>
+              <small style={{
+                color: theme?.textColor,
+                opacity: 0.6,
+              }}>File size limit: {1024}MB</small>
+            </div>
+          </div>
+          <button style={browse_btn_style}
+            disabled={this.props.disabled || this.state.uploading}
+            onClick={() => {
+              const inputField = document.querySelector(".input-field") as HTMLInputElement;
+              if (inputField) {
+                inputField.click();
+              }
+            }}
+          >
+            Browse files
+          </button>
         </form>
+        {this.state.uploading && (
+          <p>Uploading {this.state.loadedChunks} out of {this.getTotalChunks()} chunks...</p>
+        )}
+        {!this.state.uploading && this.state.loadedChunks > 0 && this.state.loadedChunks === this.getTotalChunks() && (
+          <p>Upload completed!</p>
+        )}
         {this.state.file && (
           <section className='uploaded-row'>
             <FaRegFile size='1.5em' />
