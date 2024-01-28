@@ -24,6 +24,7 @@ interface State {
   fileId: string | null;
   loadedChunks: number;
   uploading: boolean;
+  buttonHover: boolean;
 }
 
 function getCookie(name: string): string {
@@ -40,12 +41,27 @@ function getCookie(name: string): string {
   return '';
 }
 
+function hexToRgb(hex: string) : { r: number, g: number, b: number } {
+  // #を削除する
+  hex = hex.replace(/^#/, '');
+
+  // 16進数をRGBに変換する
+  var bigint = parseInt(hex, 16);
+  var r = (bigint >> 16) & 255;
+  var g = (bigint >> 8) & 255;
+  var b = bigint & 255;
+
+  // RGB値を返す
+  return { r: r, g: g, b: b };
+}
+
 class FileUploader extends StreamlitComponentBase<State> {
   public state: State = {
     file: null,
     fileId: null,
     loadedChunks: 0,
     uploading: false,
+    buttonHover: false,
   };
 
   private readonly DEFAULT_CHUNK_SIZE_MB = 32;
@@ -97,15 +113,24 @@ class FileUploader extends StreamlitComponentBase<State> {
       width: "auto",
       userSelect: "none",
       backgroundColor: theme?.backgroundColor,
-      border: `1px solid ${theme?.primaryColor}`,
-      // "&:hover": {
-      //   color: theme?.primaryColor,
-      //   borderColor: theme?.primaryColor,
-      // },
+      cursor: "pointer",
     };
+    if (this.state.buttonHover) {
+      // ホバー時のスタイルを適用
+      browse_btn_style.border= `1px solid ${theme?.primaryColor}`;
+      browse_btn_style.color = theme?.primaryColor;
+    } else{
+      // hexからrgb値に変換し、透明度を0.6にする
+      const hex = theme?.textColor as string;
+      console.log(hexToRgb(hex))
+      const { r, g, b } = hexToRgb(hex);
+      browse_btn_style.border= `1px solid rgba(${r}, ${g}, ${b}, 0.2)`;
+      browse_btn_style.color = theme?.textColor;
+    }
+
     const fileInputRef = React.createRef<HTMLInputElement>();
     return (
-      <main style={{ font: theme?.font }}>
+      <main style={{ fontFamily: theme?.font }}>
         {labelVisibility !== "collapsed" && (
           <p style={label_style}>{label}</p>
         )}
@@ -144,6 +169,8 @@ class FileUploader extends StreamlitComponentBase<State> {
           </div>
           <button type="button" style={browse_btn_style}
             disabled={this.props.disabled || this.state.uploading}
+            onMouseEnter={() => this.setState({ buttonHover: true })}
+            onMouseLeave={() => this.setState({ buttonHover: false })}
           >
             Browse files
           </button>
