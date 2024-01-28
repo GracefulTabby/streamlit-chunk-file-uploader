@@ -1,4 +1,5 @@
 import React, { ReactNode } from "react";
+import ProgressBar from 'react-bootstrap/ProgressBar';
 import {
   Streamlit,
   StreamlitComponentBase,
@@ -134,7 +135,6 @@ class FileUploader extends StreamlitComponentBase<State> {
     } else {
       // hexからrgb値に変換し、透明度を0.6にする
       const hex = theme?.textColor as string;
-      console.log(hexToRgb(hex))
       const { r, g, b } = hexToRgb(hex);
       browse_btn_style.border = `1px solid rgba(${r}, ${g}, ${b}, 0.2)`;
       browse_btn_style.color = theme?.textColor;
@@ -213,9 +213,6 @@ class FileUploader extends StreamlitComponentBase<State> {
             Browse files
           </button>
         </form>
-        {this.state.uploading && (
-          <p>Uploading {this.state.loadedChunks} out of {this.getTotalChunks()} chunks...</p>
-        )}
         {this.state.file && (
           <div style={{
             left: 0,
@@ -238,7 +235,7 @@ class FileUploader extends StreamlitComponentBase<State> {
                 color: theme?.textColor,
                 opacity: 0.6,
               }}>
-                <FaRegFile size='1.8rem' />
+                <FaRegFile size='1.5rem' />
               </div>
 
               <div style={{
@@ -260,11 +257,24 @@ class FileUploader extends StreamlitComponentBase<State> {
                 <small style={{ opacity: 0.6, lineHeight: 1.25 }}>
                   {formatBytes(this.state.file.size)}
                 </small>
+                {this.state.uploading && (
+                  <div style={{
+                    display: "flex",
+                    WebkitBoxAlign: "center",
+                    alignItems: "center",
+                    marginLeft: "auto",
+                    paddingLeft: "1rem",
+                    width:"60%"
+                  }}>
+                    <ProgressBar now={this.state.loadedChunks / this.getTotalChunks() * 100} visuallyHidden style={{ width: "100%" }} />
+                  </div>
+                )}
               </div>
 
               <div>
                 <button type="button"
                   style={delete_btn_style}
+                  disabled={this.state.uploading}
                   onClick={() => {
                     this.onClickUploadedFileDelete();
                     this.setState({ deleteButtonHover: false });
