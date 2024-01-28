@@ -202,7 +202,7 @@ class FileUploader extends StreamlitComponentBase<State> {
               <small style={{
                 color: theme?.textColor,
                 opacity: 0.6,
-              }}>File size limit: {1024}MB</small>
+              }}>File size limit: unlimited</small>
             </div>
           </div>
           <button type="button" style={browse_btn_style}
@@ -240,8 +240,8 @@ class FileUploader extends StreamlitComponentBase<State> {
 
               <div style={{
                 display: "flex",
-                WebkitBoxAlign: "baseline",
-                alignItems: "baseline",
+                WebkitBoxAlign: "center",
+                alignItems: "center",
                 flex: "1 1 0%",
                 paddingLeft: "1rem",
                 overflow: "hidden",
@@ -259,14 +259,13 @@ class FileUploader extends StreamlitComponentBase<State> {
                 </small>
                 {this.state.uploading && (
                   <div style={{
-                    display: "flex",
-                    WebkitBoxAlign: "center",
-                    alignItems: "center",
-                    marginLeft: "auto",
-                    paddingLeft: "1rem",
-                    width:"60%"
+                    padding: "0 1rem",
+                    margin: "0 auto",
+                    width: "60%",
                   }}>
-                    <ProgressBar now={this.state.loadedChunks / this.getTotalChunks() * 100} visuallyHidden style={{ width: "100%" }} />
+                    <ProgressBar
+                      now={this.state.loadedChunks / this.getTotalChunks() * 100}
+                      visuallyHidden style={{ width: "100%" }} />
                   </div>
                 )}
               </div>
