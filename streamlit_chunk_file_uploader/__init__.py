@@ -15,6 +15,7 @@ from typing import (
 from typing_extensions import Literal
 from ._models import UploadedFile, ChunkUploaderReturnValue
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit import session_state
 
 if TYPE_CHECKING:
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -42,6 +43,8 @@ else:
 def __get_files_from_file_storage(
     rv: ChunkUploaderReturnValue,
 ) -> Optional[UploadedFile]:
+    if rv is None:
+        return None
     # ファイルidがない場合には進ませない
     if rv.file_id is None:
         return None
@@ -69,10 +72,12 @@ def __get_files_from_file_storage(
         if len(combined_bytes) != rv.file_size:
             raise Exception("ファイルサイズが違う！！！")
         # 登録する
-        combined_file = UploadedFileRec(rv.file_id, rv.file_name, rv.file_type, combined_bytes)
+        combined_file = UploadedFileRec(
+            rv.file_id, rv.file_name, rv.file_type, combined_bytes
+        )
         uploaded_file_mgr.add_file(session_id, combined_file)
         del combined_bytes, combined_file
-    # ファイルを取得する    
+    # ファイルを取得する
     record = uploaded_file_mgr.get_files(session_id, [rv.file_id])[0]
     return UploadedFile(record)
 
@@ -107,11 +112,11 @@ def uploader(
     help: str, optional
         [NOT YET IMPLEMENTED] Additional help or description for the file uploader.
     on_change: Callable, optional
-        [NOT YET IMPLEMENTED] A callback function to be invoked when the files are changed or uploaded.
+        A callback function to be invoked when the files are changed or uploaded.
     args: Tuple[Any, ...], optional
-        [NOT YET IMPLEMENTED] Additional arguments to be passed to the callback function.
+        Additional arguments to be passed to the callback function.
     kwargs: Dict[str, Any], optional
-        [NOT YET IMPLEMENTED] Additional keyword arguments to be passed to the callback function.
+        Additional keyword arguments to be passed to the callback function.
     disabled: bool, optional
         [NOT YET IMPLEMENTED] If True, the file uploader is disabled and cannot be interacted with.
     label_visibility: Literal["visible", "hidden", "collapsed"], optional
@@ -128,6 +133,9 @@ def uploader(
     Optional[UploadedFile]
         The uploaded file object or None if no file is uploaded.
     """
+    _CV_KEY = f"_{key}_cv"
+    _CV_PREV_KEY = f"{_CV_KEY}_prev"
+
     ctx = get_script_run_ctx()
     session_id = ctx.session_id
     uploaded_file_mgr: MemoryUploadedFileManager = ctx.uploaded_file_mgr
@@ -138,26 +146,24 @@ def uploader(
         type=type,
         uploader_msg=uploader_msg,
         chunk_size=chunk_size,
-        key=key,
+        key=_CV_KEY,
         disabled=disabled,
         label_visibility=label_visibility,
-        default=0,
+        default=None,
         session_id=session_id,
         endpoint=endpoint,
     )
     rv = ChunkUploaderReturnValue.from_component_value(component_value)
-    # アップロードされていない場合等はNoneを受け取る
-    if rv is None:
-        return None
-
-    def __call_on_change():
-        # TODO: ファイルが変化したときにのみ実行するように実装する
-        # TODO: ファイルハッシュで比較するか
-        # prev:hash
+    file = __get_files_from_file_storage(rv)
+    # 1つ前の状態を取得
+    prev_cv: Optional[dict] = session_state.get(_CV_PREV_KEY)
+    # 状態が異なる場合にfileの書き換えとon_changeを実行する
+    if prev_cv != component_value:
+        session_state[key] = file
+        session_state[_CV_PREV_KEY] = component_value
         if on_change is not None:
             on_change(
                 *(args if args is not None else ()),
                 **(kwargs if kwargs is not None else {}),
             )
-
-    return __get_files_from_file_storage(rv)
+    return file
