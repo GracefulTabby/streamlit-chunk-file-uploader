@@ -1,0 +1,6 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "streamlit_chunk_file_uploader/_version.py"
