@@ -1,13 +1,13 @@
 import React, { ReactNode } from "react";
+import ProgressBar from 'react-bootstrap/ProgressBar';
 import {
   Streamlit,
   StreamlitComponentBase,
   withStreamlitConnection,
 } from "streamlit-component-lib";
-import { MdCloudUpload } from 'react-icons/md'
+import { MdOutlineCloudUpload } from 'react-icons/md'
 import { RxCross2 } from "react-icons/rx";
 import { FaRegFile } from 'react-icons/fa';
-import './file_uploader.css'
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 
@@ -25,6 +25,8 @@ interface State {
   fileId: string | null;
   loadedChunks: number;
   uploading: boolean;
+  buttonHover: boolean;
+  deleteButtonHover: boolean;
 }
 
 function getCookie(name: string): string {
@@ -41,35 +43,138 @@ function getCookie(name: string): string {
   return '';
 }
 
+function hexToRgb(hex: string): { r: number, g: number, b: number } {
+  // #を削除する
+  hex = hex.replace(/^#/, '');
+
+  // 16進数をRGBに変換する
+  var bigint = parseInt(hex, 16);
+  var r = (bigint >> 16) & 255;
+  var g = (bigint >> 8) & 255;
+  var b = bigint & 255;
+
+  // RGB値を返す
+  return { r: r, g: g, b: b };
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const formattedSize = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
+  return `${formattedSize}${sizes[i]}`;
+}
+
+
 class FileUploader extends StreamlitComponentBase<State> {
   public state: State = {
     file: null,
     fileId: null,
     loadedChunks: 0,
     uploading: false,
+    buttonHover: false,
+    deleteButtonHover: false,
   };
 
   private readonly DEFAULT_CHUNK_SIZE_MB = 32;
 
   public render = (): ReactNode => {
     const { theme } = this.props;
-    const style: React.CSSProperties = {};
-    if (theme) {
-      const borderStyling = `1px solid ${this.state.file ? theme.primaryColor : "gray"
-        }`;
-      style.border = borderStyling;
-      style.outline = borderStyling;
-    }
-    // チャンクサイズを受け取り、計算する
+    const label = this.props.args["label"]
     const uploadMessage = (this.props.args["uploader_msg"] || "Browse Files to upload.")
+    // ラベルの表示を設定する
+    const labelVisibility = this.props.args["label_visibility"];
+    const label_style: React.CSSProperties = {
+      visibility: labelVisibility === "visible" ? "visible" : "hidden",
+      fontSize: "14px",
+      display: "flex",
+      marginBottom: "0.25rem",
+      height: "auto",
+      minHeight: "1.5rem",
+      verticalAlign: "middle",
+      flexDirection: "row",
+      WebkitBoxAlign: "center",
+      alignItems: "center",
+      color: theme?.textColor,
+    };
+    // formのstyle()
+    const form_style: React.CSSProperties = {
+      display: "flex",
+      WebkitBoxAlign: "center",
+      alignItems: "center",
+      padding: "1rem",
+      borderRadius: "0.5rem",
+      cursor: "pointer",
+      color: theme?.textColor,
+      backgroundColor: theme?.secondaryBackgroundColor,
+    };
+    // buttonのstyle
+    const browse_btn_style: React.CSSProperties = {
+      display: "inline-flex",
+      WebkitBoxAlign: "center",
+      alignItems: "center",
+      WebkitBoxPack: "center",
+      justifyContent: "center",
+      fontWeight: 400,
+      padding: "0.25rem 0.75rem",
+      borderRadius: "0.5rem",
+      minHeight: "38.4px",
+      margin: "0px",
+      lineHeight: "1.6",
+      color: "inherit",
+      width: "auto",
+      userSelect: "none",
+      backgroundColor: theme?.backgroundColor,
+      cursor: "pointer",
+    };
+    if (this.state.buttonHover) {
+      // ホバー時のスタイルを適用
+      browse_btn_style.border = `1px solid ${theme?.primaryColor}`;
+      browse_btn_style.color = theme?.primaryColor;
+    } else {
+      // hexからrgb値に変換し、透明度を0.6にする
+      const hex = theme?.textColor as string;
+      const { r, g, b } = hexToRgb(hex);
+      browse_btn_style.border = `1px solid rgba(${r}, ${g}, ${b}, 0.2)`;
+      browse_btn_style.color = theme?.textColor;
+    }
+
+    const delete_btn_style: React.CSSProperties = {
+      display: "inline-flex",
+      WebkitBoxAlign: "center",
+      alignItems: "center",
+      WebkitBoxPack: "center",
+      justifyContent: "center",
+      fontWeight: 400,
+      borderRadius: "0.5rem",
+      minHeight: "38.4px",
+      margin: "0px",
+      lineHeight: "1.6",
+      width: "auto",
+      userSelect: "none",
+      backgroundColor: "transparent",
+      border: "none",
+      boxShadow: "none",
+      padding: "0px",
+      cursor: "pointer",
+    };
+    if (this.state.deleteButtonHover) {
+      // ホバー時のスタイルを適用
+      delete_btn_style.color = theme?.primaryColor;
+    } else {
+      delete_btn_style.color = theme?.textColor;
+    };
+
+    const fileInputRef = React.createRef<HTMLInputElement>();
     return (
-      <main>
-        <form
+      <main style={{ fontFamily: theme?.font }}>
+        {labelVisibility !== "collapsed" && (
+          <p style={label_style}>{label}</p>
+        )}
+        <form style={form_style}
           onClick={() => {
-            const inputField = document.querySelector(".input-field") as HTMLInputElement;
-            if (inputField) {
-              inputField.click();
-            }
+            fileInputRef.current?.click();
           }}
           onDragOver={(e) => this.onDragOver(e)}
           onDrop={(e) => this.onDrop(e)}
@@ -78,31 +183,107 @@ class FileUploader extends StreamlitComponentBase<State> {
             type="file"
             accept="*.*"
             className='input-field'
+            ref={fileInputRef}
             hidden
             onChange={this.onFileChange}
             disabled={this.props.disabled || this.state.uploading}
           />
-          <MdCloudUpload color='#1475cf' size={60} />
-          <p>{uploadMessage}</p>
-          {this.state.uploading && (
-            <p>Uploading {this.state.loadedChunks} out of {this.getTotalChunks()} chunks...</p>
-          )}
-          {!this.state.uploading && this.state.loadedChunks > 0 && this.state.loadedChunks === this.getTotalChunks() && (
-            <p>Upload completed!</p>
-          )}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            WebkitBoxAlign: "center",
+            marginRight: "auto",
+          }}>
+            <span style={{ marginRight: "1rem", color: theme?.textColor, opacity: 0.6, }}>
+              <MdOutlineCloudUpload size={36} />
+            </span>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ marginBottom: "0.25rem" }}>{uploadMessage}</span>
+              <small style={{
+                color: theme?.textColor,
+                opacity: 0.6,
+              }}>File size limit: unlimited</small>
+            </div>
+          </div>
+          <button type="button" style={browse_btn_style}
+            disabled={this.props.disabled || this.state.uploading}
+            onMouseEnter={() => this.setState({ buttonHover: true })}
+            onMouseLeave={() => this.setState({ buttonHover: false })}
+          >
+            Browse files
+          </button>
         </form>
         {this.state.file && (
-          <section className='uploaded-row'>
-            <FaRegFile size='1.5em' />
-            <span className='upload-content'>
-              {this.getFileName()}
-            </span>
-            <RxCross2 size='1em'
-              onClick={() => {
-                this.onClickUploadedFileDelete()
-              }}
-            />
-          </section>
+          <div style={{
+            left: 0,
+            right: 0,
+            lineHeight: 1.25,
+            paddingTop: "0.75rem",
+            paddingLeft: "1rem",
+            paddingRight: "1rem",
+          }}>
+            <div style={{
+              display: "flex",
+              WebkitBoxAlign: "center",
+              alignItems: "center",
+              marginBottom: "0.25rem",
+            }}>
+
+              <div style={{
+                display: "flex",
+                padding: "0.25rem",
+                color: theme?.textColor,
+                opacity: 0.6,
+              }}>
+                <FaRegFile size='1.5rem' />
+              </div>
+
+              <div style={{
+                display: "flex",
+                WebkitBoxAlign: "center",
+                alignItems: "center",
+                flex: "1 1 0%",
+                paddingLeft: "1rem",
+                overflow: "hidden",
+              }}>
+                <div style={{
+                  marginRight: "0.5rem",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap"
+                }}>
+                  {this.state.file.name}
+                </div>
+                <small style={{ opacity: 0.6, lineHeight: 1.25 }}>
+                  {formatBytes(this.state.file.size)}
+                </small>
+                {this.state.uploading && (
+                  <div style={{
+                    padding: "0 1rem",
+                    margin: "0 auto",
+                    width: "60%",
+                  }}>
+                    <ProgressBar
+                      now={this.state.loadedChunks / this.getTotalChunks() * 100}
+                      visuallyHidden style={{ width: "100%" }} />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <button type="button"
+                  style={delete_btn_style}
+                  disabled={this.state.uploading}
+                  onClick={() => {
+                    this.onClickUploadedFileDelete();
+                    this.setState({ deleteButtonHover: false });
+                  }}
+                  onMouseEnter={() => this.setState({ deleteButtonHover: true })}
+                  onMouseLeave={() => this.setState({ deleteButtonHover: false })}
+                ><RxCross2 size='1.25rem' /></button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     );
