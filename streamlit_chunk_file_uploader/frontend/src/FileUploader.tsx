@@ -11,7 +11,7 @@ import { FaRegFile } from 'react-icons/fa';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 
-// インプットとなる連想配列の型定義
+// Type definition for the input associative array
 type SendData = {
   fileId: string | null;
   fileName: string;
@@ -44,16 +44,16 @@ function getCookie(name: string): string {
 }
 
 function hexToRgb(hex: string): { r: number, g: number, b: number } {
-  // #を削除する
+  // Remove #
   hex = hex.replace(/^#/, '');
 
-  // 16進数をRGBに変換する
+  // Convert hex to RGB
   var bigint = parseInt(hex, 16);
   var r = (bigint >> 16) & 255;
   var g = (bigint >> 8) & 255;
   var b = bigint & 255;
 
-  // RGB値を返す
+  // Return RGB values
   return { r: r, g: g, b: b };
 }
 
@@ -84,7 +84,7 @@ class FileUploader extends StreamlitComponentBase<State> {
     const disabled = this.props.args["disabled"] || false;
     const label = this.props.args["label"]
     const uploadMessage = (this.props.args["uploader_msg"] || "Browse Files to upload.")
-    // ラベルの表示を設定する
+    // Set label visibility
     const labelVisibility = this.props.args["label_visibility"];
     const label_style: React.CSSProperties = {
       visibility: labelVisibility === "visible" ? "visible" : "hidden",
@@ -99,7 +99,7 @@ class FileUploader extends StreamlitComponentBase<State> {
       alignItems: "center",
       color: theme?.textColor,
     };
-    // formのstyle()
+    // Form style
     const form_style: React.CSSProperties = {
       display: "flex",
       WebkitBoxAlign: "center",
@@ -110,7 +110,7 @@ class FileUploader extends StreamlitComponentBase<State> {
       color: theme?.textColor,
       backgroundColor: theme?.secondaryBackgroundColor,
     };
-    // buttonのstyle
+    // Button style
     const browse_btn_style: React.CSSProperties = {
       display: "inline-flex",
       WebkitBoxAlign: "center",
@@ -130,16 +130,16 @@ class FileUploader extends StreamlitComponentBase<State> {
       cursor: "pointer",
       fontSize: "0.875rem",
     };
-    if (disabled){
+    if (disabled) {
       browse_btn_style.opacity = 0.4;
       browse_btn_style.cursor = "not-allowed";
     }
     if (this.state.buttonHover) {
-      // ホバー時のスタイルを適用
+      // Apply hover style
       browse_btn_style.border = `1px solid ${theme?.primaryColor}`;
       browse_btn_style.color = theme?.primaryColor;
     } else {
-      // hexからrgb値に変換し、透明度を0.6にする
+      // Convert hex to rgb and set opacity to 0.6
       const hex = theme?.textColor as string;
       const { r, g, b } = hexToRgb(hex);
       browse_btn_style.border = `1px solid rgba(${r}, ${g}, ${b}, 0.2)`;
@@ -165,7 +165,7 @@ class FileUploader extends StreamlitComponentBase<State> {
       cursor: "pointer",
     };
     if (this.state.deleteButtonHover) {
-      // ホバー時のスタイルを適用
+      // Apply hover style
       delete_btn_style.color = theme?.primaryColor;
     } else {
       delete_btn_style.color = theme?.textColor;
@@ -203,11 +203,11 @@ class FileUploader extends StreamlitComponentBase<State> {
               <MdOutlineCloudUpload size={36} />
             </span>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ 
+              <span style={{
                 fontSize: "0.875rem",
                 marginBottom: "0.25rem",
                 opacity: disabled ? 0.6 : 1,
-                 }}>{uploadMessage}</span>
+              }}>{uploadMessage}</span>
               <small style={{
                 color: theme?.textColor,
                 opacity: 0.6,
@@ -298,18 +298,18 @@ class FileUploader extends StreamlitComponentBase<State> {
     );
   };
 
-  // ドラッグオーバー時の処理
+  // Handle drag over
   private onDragOver = (event: React.DragEvent<HTMLFormElement>): void => {
     event.preventDefault();
   };
 
-  // ドロップ時の処理
+  // Handle drop
   private onDrop = (event: React.DragEvent<HTMLFormElement>): void => {
     event.preventDefault();
     this.handleDrop(event.dataTransfer.files);
   };
 
-  // ドロップされたファイルを処理する
+  // Process dropped files
   private handleDrop = (files: FileList | null): void => {
     if (files && files.length > 0) {
       const file = files[0];
@@ -434,10 +434,10 @@ class FileUploader extends StreamlitComponentBase<State> {
     const sessionId = this.props.args["session_id"];
     const fileId = uuidv4();
 
-    // すべてのチャンクのデータをfetchするためのPromiseを格納する配列を作成
+    // Create an array to store Promises for fetching data of all chunks.
     const axiosInstances: Promise<void>[] = [];
 
-    // チャンクを1つずつ処理してデータをfetchする
+    // Process each chunk one by one and fetch the data.
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
       const start = chunkIndex * fileChunkSize;
       const end = Math.min(start + fileChunkSize, file.size);
@@ -446,14 +446,14 @@ class FileUploader extends StreamlitComponentBase<State> {
       formData.append('sessionId', sessionId);
       formData.append('file', chunk);
 
-      // Axiosのインスタンスを作成し、リクエストを送信する
+      // Create an Axios instance and send the request.
       const axiosInstance = axios.create({
         headers: {
           'X-Xsrftoken': this.getXsrftoken(),
         },
       });
 
-      // リクエストを送信し、結果を処理するPromiseを配列に追加する
+      // Send the request and add the Promise for handling the result to the array.
       axiosInstances.push(
         await axiosInstance.put(`${endPoint}/${sessionId}/${fileId}.${chunkIndex}`, formData)
           .then(response => {
@@ -469,13 +469,13 @@ class FileUploader extends StreamlitComponentBase<State> {
     }
 
     try {
-      // すべてのリクエストが完了するまで待機
+      // Wait for all requests to complete.
       await Promise.all(axiosInstances);
 
     } catch (error) {
       console.error('Fetch error:', error);
     } finally {
-      // ファイルの情報を送信
+      // Send file information.
       const sendData: SendData = {
         fileId: fileId,
         fileName: file.name,
@@ -484,7 +484,7 @@ class FileUploader extends StreamlitComponentBase<State> {
         totalChunks,
       };
       Streamlit.setComponentValue(sendData);
-      // アップロード中の状態を解除
+      // Clear the uploading state.
       this.setState({ uploading: false, fileId });
     }
     return Promise.resolve();
