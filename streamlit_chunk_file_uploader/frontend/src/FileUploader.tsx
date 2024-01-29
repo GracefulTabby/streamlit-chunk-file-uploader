@@ -181,7 +181,7 @@ class FileUploader extends StreamlitComponentBase<State> {
         >
           <input
             type="file"
-            accept="*.*"
+            accept={this.props.args["accept"] || "*.*"}
             className='input-field'
             ref={fileInputRef}
             hidden
