@@ -32,8 +32,22 @@ def generate_accept_string(extensions: Union[str, Sequence[str], None]) -> str:
     if extensions is None:
         return "*.*"
     elif isinstance(extensions, str):
-        extensions = [extensions]
+        # Check if it's a MIME type
+        if "/" in extensions:
+            return extensions
+        extensions = [f".{extensions.strip().lstrip('.')}"]
     else:
-        pass
+        # If it's a sequence, handle each extension accordingly
+        ext_list = []
+        for ext_item in extensions:
+            if isinstance(ext_item, str):
+                # Check if it's a MIME type
+                if "/" in ext_item:
+                    ext_list.append(ext_item)
+                else:
+                    ext_list.append(f".{ext_item.strip().lstrip('.')}")
+            else:
+                raise TypeError("Each extension must be a string.")
+        extensions = ext_list
 
-    return ",".join([f".{ext}" for ext in extensions])
+    return ",".join([ext for ext in extensions])

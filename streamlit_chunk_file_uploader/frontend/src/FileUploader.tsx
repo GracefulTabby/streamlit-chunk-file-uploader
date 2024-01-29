@@ -81,6 +81,7 @@ class FileUploader extends StreamlitComponentBase<State> {
 
   public render = (): ReactNode => {
     const { theme } = this.props;
+    const disabled = this.props.args["disabled"] || false;
     const label = this.props.args["label"]
     const uploadMessage = (this.props.args["uploader_msg"] || "Browse Files to upload.")
     // ラベルの表示を設定する
@@ -127,7 +128,12 @@ class FileUploader extends StreamlitComponentBase<State> {
       userSelect: "none",
       backgroundColor: theme?.backgroundColor,
       cursor: "pointer",
+      fontSize: "0.875rem",
     };
+    if (disabled){
+      browse_btn_style.opacity = 0.4;
+      browse_btn_style.cursor = "not-allowed";
+    }
     if (this.state.buttonHover) {
       // ホバー時のスタイルを適用
       browse_btn_style.border = `1px solid ${theme?.primaryColor}`;
@@ -139,7 +145,6 @@ class FileUploader extends StreamlitComponentBase<State> {
       browse_btn_style.border = `1px solid rgba(${r}, ${g}, ${b}, 0.2)`;
       browse_btn_style.color = theme?.textColor;
     }
-
     const delete_btn_style: React.CSSProperties = {
       display: "inline-flex",
       WebkitBoxAlign: "center",
@@ -186,7 +191,7 @@ class FileUploader extends StreamlitComponentBase<State> {
             ref={fileInputRef}
             hidden
             onChange={this.onFileChange}
-            disabled={this.props.disabled || this.state.uploading}
+            disabled={disabled || this.state.uploading}
           />
           <div style={{
             display: "flex",
@@ -198,7 +203,11 @@ class FileUploader extends StreamlitComponentBase<State> {
               <MdOutlineCloudUpload size={36} />
             </span>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ marginBottom: "0.25rem" }}>{uploadMessage}</span>
+              <span style={{ 
+                fontSize: "0.875rem",
+                marginBottom: "0.25rem",
+                opacity: disabled ? 0.6 : 1,
+                 }}>{uploadMessage}</span>
               <small style={{
                 color: theme?.textColor,
                 opacity: 0.6,
@@ -206,7 +215,7 @@ class FileUploader extends StreamlitComponentBase<State> {
             </div>
           </div>
           <button type="button" style={browse_btn_style}
-            disabled={this.props.disabled || this.state.uploading}
+            disabled={disabled || this.state.uploading}
             onMouseEnter={() => this.setState({ buttonHover: true })}
             onMouseLeave={() => this.setState({ buttonHover: false })}
           >
