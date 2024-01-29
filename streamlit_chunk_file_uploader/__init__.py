@@ -93,8 +93,7 @@ def uploader(
     disabled: bool = False,
     label_visibility: Literal["visible", "hidden", "collapsed"] = "visible",
     chunk_size: int = 32,
-    uploader_msg: str = "Browse Files to upload.",
-    show_progress: bool = True,
+    uploader_msg: str = "Drag and drop file here",
 ) -> Optional[UploadedFile]:
     """Create a new instance of the file uploader component.
 

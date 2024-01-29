@@ -5,8 +5,7 @@ st.subheader("Streamlit Chunk File Uploader.")
 
 st.subheader("ChunkUploader")
 file = uploader(
-    "World",
-    uploader_msg="Please upload the file.",
+    "chunk file uploader (No Limit)",
     key="chunk_uploader",
     chunk_size=32,
 )
