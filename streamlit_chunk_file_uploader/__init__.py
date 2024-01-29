@@ -14,6 +14,7 @@ from typing import (
 )
 from typing_extensions import Literal
 from ._models import UploadedFile, ChunkUploaderReturnValue
+from ._utils import generate_accept_string
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit import session_state
 
@@ -38,8 +39,6 @@ else:
     _component_func = components.declare_component(COMPONENT_NAME, path=build_dir)
 
 
-# @st.cache_data(show_spinner="Retrieving uploaded data...") # ** Memory hog **
-# TODO : Do you have cache_data?
 def __get_files_from_file_storage(
     rv: ChunkUploaderReturnValue,
 ) -> Optional[UploadedFile]:
@@ -102,7 +101,7 @@ def uploader(
     label: str
         The label or title for the file uploader.
     type: Union[str, Sequence[str], None], optional
-        [NOT YET IMPLEMENTED] The type or types of files that the uploader accepts. It can be a string
+        The type or types of files that the uploader accepts. It can be a string
         (e.g., 'image/jpeg'), a sequence of strings, or None for all types.
     key: str or None, optional
         An optional key that uniquely identifies this file uploader. If set, it
@@ -142,7 +141,7 @@ def uploader(
     # コンポーネントからファイルを受け取る
     component_value = _component_func(
         label=label,
-        type=type,
+        accept=generate_accept_string(type),
         uploader_msg=uploader_msg,
         chunk_size=chunk_size,
         key=_CV_KEY,
