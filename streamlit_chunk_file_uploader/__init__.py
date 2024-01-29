@@ -116,9 +116,9 @@ def uploader(
     kwargs: Dict[str, Any], optional
         Additional keyword arguments to be passed to the callback function.
     disabled: bool, optional
-        [NOT YET IMPLEMENTED] If True, the file uploader is disabled and cannot be interacted with.
+        If True, the file uploader is disabled and cannot be interacted with.
     label_visibility: Literal["visible", "hidden", "collapsed"], optional
-        [NOT YET IMPLEMENTED] The visibility setting for the label ('visible', 'hidden', or 'collapsed').
+        The visibility setting for the label ('visible', 'hidden', or 'collapsed').
     chunk_size: int, optional
         The size in bytes at which files exceeding this limit will be chunked
         and sent in separate parts during transmission to the frontend.
