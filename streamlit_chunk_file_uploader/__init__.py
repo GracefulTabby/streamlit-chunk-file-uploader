@@ -44,24 +44,24 @@ def __get_files_from_file_storage(
 ) -> Optional[UploadedFile]:
     if rv is None:
         return None
-    # ファイルidがない場合には進ませない
+    # Do not proceed if there is no file id
     if rv.file_id is None:
         return None
-    # コンテキストを取得
+    # Get the context
     ctx = get_script_run_ctx()
     session_id = ctx.session_id
-    # streamlitのアップロードマネージャを取得
+    # Get the streamlit upload manager
     uploaded_file_mgr: "MemoryUploadedFileManager" = ctx.uploaded_file_mgr
-    # session_idに紐づくファイルデータを取得
+    # Get the file data associated with the session_id
     file_storage: Dict[str, UploadedFileRec] = uploaded_file_mgr.file_storage.get(
         session_id, {}
     )
-    # マルチパートの場合には{uuid}.{chunk_id}のようになるため、取得する
+    # In the case of multipart, the format will be {uuid}.{chunk_id}, so we need to retrieve it
     file_ids = [k for k in file_storage.keys() if k.startswith(rv.file_id)]
     if len(file_ids) > 1:
-        # ファイル件数が合わない場合には例外
+        # Raise an exception if the number of files doesn't match
         if rv.total_chunks != len(file_ids):
-            raise Exception("アップロード失敗！！")
+            raise Exception("Upload failed!!")
         sorted_file_ids = list(sorted(file_ids, key=lambda x: x.split(".")[1]))
         combined_bytes = b""
         for file_id in sorted_file_ids:
@@ -69,14 +69,14 @@ def __get_files_from_file_storage(
             combined_bytes += record.data
             uploaded_file_mgr.remove_file(session_id, file_id)
         if len(combined_bytes) != rv.file_size:
-            raise Exception("ファイルサイズが違う！！！")
-        # 登録する
+            raise Exception("File sizes do not match!!!")
+        # Register
         combined_file = UploadedFileRec(
             rv.file_id, rv.file_name, rv.file_type, combined_bytes
         )
         uploaded_file_mgr.add_file(session_id, combined_file)
         del combined_bytes, combined_file
-    # ファイルを取得する
+    # Get the file
     record = uploaded_file_mgr.get_files(session_id, [rv.file_id])[0]
     return UploadedFile(record)
 
@@ -138,7 +138,7 @@ def uploader(
     session_id = ctx.session_id
     uploaded_file_mgr: MemoryUploadedFileManager = ctx.uploaded_file_mgr
     endpoint = uploaded_file_mgr.endpoint
-    # コンポーネントからファイルを受け取る
+    # Receive files from the component
     component_value = _component_func(
         label=label,
         accept=generate_accept_string(type),
@@ -153,9 +153,9 @@ def uploader(
     )
     rv = ChunkUploaderReturnValue.from_component_value(component_value)
     file = __get_files_from_file_storage(rv)
-    # 1つ前の状態を取得
+    # Get the previous state
     prev_cv: Optional[dict] = session_state.get(_CV_PREV_KEY)
-    # 状態が異なる場合にfileの書き換えとon_changeを実行する
+    # Rewrite file and execute on_change if the state is different
     if prev_cv != component_value:
         session_state[key] = file
         session_state[_CV_PREV_KEY] = component_value
