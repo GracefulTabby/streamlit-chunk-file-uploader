@@ -190,6 +190,9 @@ class FileUploader extends StreamlitComponentBase<State> {
             className='input-field'
             ref={fileInputRef}
             hidden
+            onClick={(e) => {
+              e.currentTarget.value = "";
+            }}
             onChange={this.onFileChange}
             disabled={disabled || this.state.uploading}
           />

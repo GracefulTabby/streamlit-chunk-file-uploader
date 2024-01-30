@@ -62,7 +62,7 @@ def __get_files_from_file_storage(
         # Raise an exception if the number of files doesn't match
         if rv.total_chunks != len(file_ids):
             raise Exception("Upload failed!!")
-        sorted_file_ids = list(sorted(file_ids, key=lambda x: x.split(".")[1]))
+        sorted_file_ids = list(sorted(file_ids, key=lambda x: int(x.split(".")[1])))
         combined_bytes = b""
         for file_id in sorted_file_ids:
             record = uploaded_file_mgr.get_files(session_id, file_ids=[file_id])[0]
