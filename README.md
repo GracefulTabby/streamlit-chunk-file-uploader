@@ -1,7 +1,6 @@
 # streamlit-chunk-file-uploader
 
 [![image](https://img.shields.io/pypi/v/streamlit-chunk-file-uploader.svg)](https://pypi.python.org/pypi/streamlit-chunk-file-uploader)
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chunk-file-uploader.streamlit.app/)
 
 This is a custom component that allows you to split files and send them from your browser to Streamlit.
 
