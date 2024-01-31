@@ -3,17 +3,14 @@ from streamlit_chunk_file_uploader import uploader
 
 
 def index() -> None:
-    st.subheader("Streamlit Chunk File Uploader.")
-
+    st.subheader("Streamlit Chunk File Uploader Demo!")
     # ChunkFileUploader example.
-    st.subheader("ChunkUploader")
+    st.subheader("ChunkUploader",divider=True)
     # IMPORTANT: If there are constraints, set the chunk size a little smaller.
     file = uploader(
         "chunk file uploader (No Limit)",
-        type=["csv"],
         key="chunk_uploader",
-        label_visibility="visible",
-        uploader_msg="Drag and drop CSV file here",
+        uploader_msg="Drag and drop Large file here",
         chunk_size=31,
     )
     st.write(file)
@@ -24,12 +21,10 @@ def index() -> None:
             file_name=file.name,
             type="primary",
         )
-
     # streamlit file_uploader example.
-    st.subheader("st.file_uploader")
+    st.subheader("st.file_uploader",divider=True)
     file_2 = st.file_uploader(
-        "Upload the csv file",
-        type="csv",
+        "Upload the file",
     )
     st.write(file_2)
 
