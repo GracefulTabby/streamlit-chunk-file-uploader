@@ -351,7 +351,7 @@ class FileUploader extends StreamlitComponentBase<State> {
     const xsrfToken = this.getXsrftoken();
     try {
       if (fileId) {
-        const config :any = {
+        const config: any = {
           baseURL: getStreamlitUrl(),
         };
         if (xsrfToken) {
@@ -412,7 +412,7 @@ class FileUploader extends StreamlitComponentBase<State> {
         formData.append('sessionId', sessionId);
         formData.append('file', file);
         const xsrfToken = this.getXsrftoken();
-        const config:any = {
+        const config: any = {
           baseURL: getStreamlitUrl(),
         };
         if (xsrfToken) {
@@ -466,7 +466,7 @@ class FileUploader extends StreamlitComponentBase<State> {
       formData.append('sessionId', sessionId);
       formData.append('file', chunk);
       const xsrfToken = this.getXsrftoken();
-      const config:any = {
+      const config: any = {
         baseURL: getStreamlitUrl(),
       };
       if (xsrfToken) {
