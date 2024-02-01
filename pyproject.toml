@@ -4,3 +4,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "streamlit_chunk_file_uploader/_version.py"
+local_scheme = "no-local-version"
