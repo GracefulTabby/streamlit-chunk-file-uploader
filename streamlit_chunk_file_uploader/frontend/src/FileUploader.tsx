@@ -66,6 +66,13 @@ function formatBytes(bytes: number): string {
   return `${formattedSize}${sizes[i]}`;
 }
 
+function getStreamlitUrl(): string {
+  // streamlitUrl
+  var queryString = window.location.search;
+  var urlParams = new URLSearchParams(queryString);
+  return urlParams.get("streamlitUrl") || window.parent.document.baseURI;
+}
+
 
 class FileUploader extends StreamlitComponentBase<State> {
   public state: State = {
@@ -341,13 +348,18 @@ class FileUploader extends StreamlitComponentBase<State> {
     const endPoint = this.props.args["endpoint"];
     const sessionId = this.props.args["session_id"];
     const fileId = this.state.fileId;
+    const xsrfToken = this.getXsrftoken();
     try {
       if (fileId) {
-        await axios.delete(`${endPoint}/${sessionId}/${fileId}`, {
-          headers: {
-            'X-Xsrftoken': this.getXsrftoken(),
-          },
-        });
+        const config: any = {
+          baseURL: getStreamlitUrl(),
+        };
+        if (xsrfToken) {
+          config.headers = {
+            'X-Xsrftoken': xsrfToken,
+          };
+        }
+        await axios.delete(`${endPoint}/${sessionId}/${fileId}`, config);
       }
     } finally {
       this.setState({ fileId: null });
@@ -399,12 +411,17 @@ class FileUploader extends StreamlitComponentBase<State> {
         const formData = new FormData();
         formData.append('sessionId', sessionId);
         formData.append('file', file);
+        const xsrfToken = this.getXsrftoken();
+        const config: any = {
+          baseURL: getStreamlitUrl(),
+        };
+        if (xsrfToken) {
+          config.headers = {
+            'X-Xsrftoken': xsrfToken,
+          };
+        }
         try {
-          const response = await axios.put(`${endPoint}/${sessionId}/${fileId}`, formData, {
-            headers: {
-              'X-Xsrftoken': this.getXsrftoken(),
-            },
-          });
+          const response = await axios.put(`${endPoint}/${sessionId}/${fileId}`, formData, config);
           if (response.status === 204) {
             this.setState({ fileId });
             const sendData: SendData = {
@@ -448,14 +465,17 @@ class FileUploader extends StreamlitComponentBase<State> {
       const formData = new FormData();
       formData.append('sessionId', sessionId);
       formData.append('file', chunk);
-
+      const xsrfToken = this.getXsrftoken();
+      const config: any = {
+        baseURL: getStreamlitUrl(),
+      };
+      if (xsrfToken) {
+        config.headers = {
+          'X-Xsrftoken': xsrfToken,
+        };
+      }
       // Create an Axios instance and send the request.
-      const axiosInstance = axios.create({
-        headers: {
-          'X-Xsrftoken': this.getXsrftoken(),
-        },
-      });
-
+      const axiosInstance = axios.create(config);
       // Send the request and add the Promise for handling the result to the array.
       axiosInstances.push(
         await axiosInstance.put(`${endPoint}/${sessionId}/${fileId}.${chunkIndex}`, formData)
