@@ -85,6 +85,7 @@ class FileUploader extends StreamlitComponentBase<State> {
   };
 
   private readonly DEFAULT_CHUNK_SIZE_MB = 32;
+  private readonly MAX_PARALLEL_UPLOADS = 4;
 
   public render = (): ReactNode => {
     const { theme } = this.props;
@@ -454,8 +455,13 @@ class FileUploader extends StreamlitComponentBase<State> {
     const sessionId = this.props.args["session_id"];
     const fileId = uuidv4();
 
-    // Create an array to store Promises for fetching data of all chunks.
-    const axiosInstances: Promise<void>[] = [];
+    // Limit the number of concurrent executions
+    const Parallels = (ps = new Set<Promise<unknown>>()) => ({
+      add: (p: Promise<unknown>) => ps.add(!!p.then(() => ps.delete(p)).catch(() => ps.delete(p)) && p),
+      wait: (limit: number) => ps.size >= limit && Promise.race(ps),
+      all: () => Promise.all(ps),
+    });
+    const ps = Parallels();
 
     // Process each chunk one by one and fetch the data.
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
@@ -477,8 +483,8 @@ class FileUploader extends StreamlitComponentBase<State> {
       // Create an Axios instance and send the request.
       const axiosInstance = axios.create(config);
       // Send the request and add the Promise for handling the result to the array.
-      axiosInstances.push(
-        await axiosInstance.put(`${endPoint}/${sessionId}/${fileId}.${chunkIndex}`, formData)
+      ps.add(
+        axiosInstance.put(`${endPoint}/${sessionId}/${fileId}.${chunkIndex}`, formData)
           .then(response => {
             this.setState(prevState => ({
               loadedChunks: prevState.loadedChunks + 1
@@ -489,11 +495,13 @@ class FileUploader extends StreamlitComponentBase<State> {
             throw error;
           })
       );
+      // Limit the number of concurrent requests to avoid overloading the server.
+      await ps.wait(this.MAX_PARALLEL_UPLOADS);
     }
 
     try {
       // Wait for all requests to complete.
-      await Promise.all(axiosInstances);
+      await ps.all();
 
     } catch (error) {
       console.error('Fetch error:', error);
