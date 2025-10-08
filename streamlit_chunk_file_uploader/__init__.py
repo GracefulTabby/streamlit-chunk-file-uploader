@@ -58,6 +58,11 @@ def __get_files_from_file_storage(
     )
     # In the case of multipart, the format will be {uuid}.{chunk_id}, so we need to retrieve it
     file_ids = [k for k in file_storage.keys() if k.startswith(rv.file_id)]
+    
+    # If no files found, return None
+    if len(file_ids) == 0:
+        return None
+    
     if len(file_ids) > 1:
         # Raise an exception if the number of files doesn't match
         if rv.total_chunks != len(file_ids):
@@ -76,9 +81,26 @@ def __get_files_from_file_storage(
         )
         uploaded_file_mgr.add_file(session_id, combined_file)
         del combined_bytes, combined_file
+    elif len(file_ids) == 1 and file_ids[0] != rv.file_id:
+        # Handle the case where there's a single chunk with a suffix (e.g., {fileId}.0)
+        # Check if this is expected (totalChunks should be 1) or an error (missing chunks)
+        if rv.total_chunks is not None and rv.total_chunks > 1:
+            raise Exception(f"Upload incomplete! Expected {rv.total_chunks} chunks but only found {len(file_ids)}")
+        # This can happen if totalChunks is 1 but the file was uploaded through the chunked path
+        chunk_file_id = file_ids[0]
+        record = uploaded_file_mgr.get_files(session_id, file_ids=[chunk_file_id])[0]
+        # Re-register without the chunk suffix
+        combined_file = UploadedFileRec(
+            rv.file_id, rv.file_name, rv.file_type, record.data
+        )
+        uploaded_file_mgr.add_file(session_id, combined_file)
+        uploaded_file_mgr.remove_file(session_id, chunk_file_id)
+    
     # Get the file
-    record = uploaded_file_mgr.get_files(session_id, [rv.file_id])[0]
-    return UploadedFile(record)
+    files = uploaded_file_mgr.get_files(session_id, [rv.file_id])
+    if len(files) == 0:
+        return None
+    return UploadedFile(files[0])
 
 
 def uploader(
