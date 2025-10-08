@@ -12,6 +12,7 @@ def index() -> None:
         key="chunk_uploader",
         uploader_msg="Drag and drop Large file here",
         chunk_size=31,
+        help="Upload large files without size restrictions. Files are uploaded in chunks.",
     )
     st.write(file)
     if file is not None:
