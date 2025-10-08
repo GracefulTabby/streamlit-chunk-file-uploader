@@ -13,7 +13,7 @@ from typing import (
     TYPE_CHECKING,
 )
 from typing_extensions import Literal
-from ._models import UploadedFile, ChunkUploaderReturnValue
+from ._models import UploadedFile, ChunkUploaderReturnValue, FileInfo
 from ._utils import generate_accept_string
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit import session_state
@@ -41,11 +41,8 @@ else:
 
 def __get_files_from_file_storage(
     rv: ChunkUploaderReturnValue,
-) -> Optional[UploadedFile]:
+) -> Optional[Union[UploadedFile, List[UploadedFile]]]:
     if rv is None:
-        return None
-    # Do not proceed if there is no file id
-    if rv.file_id is None:
         return None
     # Get the context
     ctx = get_script_run_ctx()
@@ -56,28 +53,62 @@ def __get_files_from_file_storage(
     file_storage: Dict[str, UploadedFileRec] = uploaded_file_mgr.file_storage.get(
         session_id, {}
     )
+    
+    # Handle multiple files if present
+    if rv.files:
+        result_files = []
+        for file_info in rv.files:
+            file = __process_single_file(
+                file_info.file_id, file_info.file_name, file_info.file_type,
+                file_info.file_size, file_info.total_chunks,
+                session_id, uploaded_file_mgr, file_storage
+            )
+            if file:
+                result_files.append(file)
+        return result_files if result_files else None
+    
+    # Handle single file (backward compatibility)
+    if rv.file_id is None:
+        return None
+    return __process_single_file(
+        rv.file_id, rv.file_name, rv.file_type,
+        rv.file_size, rv.total_chunks,
+        session_id, uploaded_file_mgr, file_storage
+    )
+
+
+def __process_single_file(
+    file_id: str,
+    file_name: str,
+    file_type: str,
+    file_size: int,
+    total_chunks: Optional[int],
+    session_id: str,
+    uploaded_file_mgr: "MemoryUploadedFileManager",
+    file_storage: Dict[str, UploadedFileRec],
+) -> Optional[UploadedFile]:
     # In the case of multipart, the format will be {uuid}.{chunk_id}, so we need to retrieve it
-    file_ids = [k for k in file_storage.keys() if k.startswith(rv.file_id)]
+    file_ids = [k for k in file_storage.keys() if k.startswith(file_id)]
     if len(file_ids) > 1:
         # Raise an exception if the number of files doesn't match
-        if rv.total_chunks != len(file_ids):
+        if total_chunks != len(file_ids):
             raise Exception("Upload failed!!")
         sorted_file_ids = list(sorted(file_ids, key=lambda x: int(x.split(".")[1])))
         combined_bytes = b""
-        for file_id in sorted_file_ids:
-            record = uploaded_file_mgr.get_files(session_id, file_ids=[file_id])[0]
+        for fid in sorted_file_ids:
+            record = uploaded_file_mgr.get_files(session_id, file_ids=[fid])[0]
             combined_bytes += record.data
-            uploaded_file_mgr.remove_file(session_id, file_id)
-        if len(combined_bytes) != rv.file_size:
+            uploaded_file_mgr.remove_file(session_id, fid)
+        if len(combined_bytes) != file_size:
             raise Exception("File sizes do not match!!!")
         # Register
         combined_file = UploadedFileRec(
-            rv.file_id, rv.file_name, rv.file_type, combined_bytes
+            file_id, file_name, file_type, combined_bytes
         )
         uploaded_file_mgr.add_file(session_id, combined_file)
         del combined_bytes, combined_file
     # Get the file
-    record = uploaded_file_mgr.get_files(session_id, [rv.file_id])[0]
+    record = uploaded_file_mgr.get_files(session_id, [file_id])[0]
     return UploadedFile(record)
 
 
@@ -93,7 +124,8 @@ def uploader(
     label_visibility: Literal["visible", "hidden", "collapsed"] = "visible",
     chunk_size: int = 32,
     uploader_msg: str = "Drag and drop file here",
-) -> Optional[UploadedFile]:
+    accept_multiple_files: bool = False,
+) -> Optional[Union[UploadedFile, List[UploadedFile]]]:
     """Create a new instance of the file uploader component.
 
     Parameters
@@ -125,11 +157,14 @@ def uploader(
     uploader_msg: str, optional
         The message displayed in the file uploader, prompting users to browse
         and upload files.
+    accept_multiple_files: bool, optional
+        If True, allows multiple files to be uploaded at once.
 
     Returns
     -------
-    Optional[UploadedFile]
-        The uploaded file object or None if no file is uploaded.
+    Optional[Union[UploadedFile, List[UploadedFile]]]
+        The uploaded file object, a list of uploaded files if accept_multiple_files
+        is True, or None if no file is uploaded.
     """
     _CV_KEY = f"_{key}_cv"
     _CV_PREV_KEY = f"{_CV_KEY}_prev"
@@ -147,6 +182,7 @@ def uploader(
         key=_CV_KEY,
         disabled=disabled,
         label_visibility=label_visibility,
+        accept_multiple_files=accept_multiple_files,
         default=None,
         session_id=session_id,
         endpoint=endpoint,
