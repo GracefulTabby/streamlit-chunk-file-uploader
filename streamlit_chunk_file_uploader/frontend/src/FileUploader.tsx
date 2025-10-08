@@ -18,11 +18,22 @@ type SendData = {
   fileSize: number;
   fileType: string;
   totalChunks: number;
+  files?: FileData[];
+};
+
+type FileData = {
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  totalChunks: number;
 };
 
 interface State {
   file: File | null;
+  files: File[];
   fileId: string | null;
+  fileIds: string[];
   loadedChunks: number;
   uploading: boolean;
   buttonHover: boolean;
@@ -77,7 +88,9 @@ function getStreamlitUrl(): string {
 class FileUploader extends StreamlitComponentBase<State> {
   public state: State = {
     file: null,
+    files: [],
     fileId: null,
+    fileIds: [],
     loadedChunks: 0,
     uploading: false,
     buttonHover: false,
@@ -92,6 +105,7 @@ class FileUploader extends StreamlitComponentBase<State> {
     const disabled = this.props.args["disabled"] || false;
     const label = this.props.args["label"]
     const uploadMessage = (this.props.args["uploader_msg"] || "Browse Files to upload.")
+    const acceptMultipleFiles = this.props.args["accept_multiple_files"] || false;
     // Set label visibility
     const labelVisibility = this.props.args["label_visibility"];
     const label_style: React.CSSProperties = {
@@ -198,6 +212,7 @@ class FileUploader extends StreamlitComponentBase<State> {
             className='input-field'
             ref={fileInputRef}
             hidden
+            multiple={acceptMultipleFiles}
             onClick={(e) => {
               e.currentTarget.value = "";
             }}
@@ -233,7 +248,7 @@ class FileUploader extends StreamlitComponentBase<State> {
             Browse files
           </button>
         </form>
-        {this.state.file && (
+        {acceptMultipleFiles && this.state.files.length > 0 ? (
           <div style={{
             left: 0,
             right: 0,
@@ -242,68 +257,142 @@ class FileUploader extends StreamlitComponentBase<State> {
             paddingLeft: "1rem",
             paddingRight: "1rem",
           }}>
-            <div style={{
-              display: "flex",
-              WebkitBoxAlign: "center",
-              alignItems: "center",
-              marginBottom: "0.25rem",
-            }}>
-
-              <div style={{
+            {this.state.files.map((file, index) => (
+              <div key={index} style={{
                 display: "flex",
-                padding: "0.25rem",
-                color: theme?.textColor,
-                opacity: 0.6,
+                WebkitBoxAlign: "center",
+                alignItems: "center",
+                marginBottom: "0.25rem",
               }}>
-                <FaRegFile size='1.5rem' />
-              </div>
+                <div style={{
+                  display: "flex",
+                  padding: "0.25rem",
+                  color: theme?.textColor,
+                  opacity: 0.6,
+                }}>
+                  <FaRegFile size='1.5rem' />
+                </div>
 
+                <div style={{
+                  display: "flex",
+                  WebkitBoxAlign: "center",
+                  alignItems: "center",
+                  flex: "1 1 0%",
+                  paddingLeft: "1rem",
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    marginRight: "0.5rem",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  }}>
+                    {file.name}
+                  </div>
+                  <small style={{ opacity: 0.6, lineHeight: 1.25 }}>
+                    {formatBytes(file.size)}
+                  </small>
+                  {this.state.uploading && (
+                    <div style={{
+                      padding: "0 1rem",
+                      margin: "0 auto",
+                      width: "60%",
+                    }}>
+                      <ProgressBar
+                        now={this.state.loadedChunks / this.getTotalChunks() * 100}
+                        visuallyHidden style={{ width: "100%" }} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <button type="button"
+                    style={delete_btn_style}
+                    disabled={this.state.uploading}
+                    onClick={() => {
+                      this.onClickUploadedFileDelete(index);
+                      this.setState({ deleteButtonHover: false });
+                    }}
+                    onMouseEnter={() => this.setState({ deleteButtonHover: true })}
+                    onMouseLeave={() => this.setState({ deleteButtonHover: false })}
+                  ><RxCross2 size='1.25rem' /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          this.state.file && (
+            <div style={{
+              left: 0,
+              right: 0,
+              lineHeight: 1.25,
+              paddingTop: "0.75rem",
+              paddingLeft: "1rem",
+              paddingRight: "1rem",
+            }}>
               <div style={{
                 display: "flex",
                 WebkitBoxAlign: "center",
                 alignItems: "center",
-                flex: "1 1 0%",
-                paddingLeft: "1rem",
-                overflow: "hidden",
+                marginBottom: "0.25rem",
               }}>
-                <div style={{
-                  marginRight: "0.5rem",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap"
-                }}>
-                  {this.state.file.name}
-                </div>
-                <small style={{ opacity: 0.6, lineHeight: 1.25 }}>
-                  {formatBytes(this.state.file.size)}
-                </small>
-                {this.state.uploading && (
-                  <div style={{
-                    padding: "0 1rem",
-                    margin: "0 auto",
-                    width: "60%",
-                  }}>
-                    <ProgressBar
-                      now={this.state.loadedChunks / this.getTotalChunks() * 100}
-                      visuallyHidden style={{ width: "100%" }} />
-                  </div>
-                )}
-              </div>
 
-              <div>
-                <button type="button"
-                  style={delete_btn_style}
-                  disabled={this.state.uploading}
-                  onClick={() => {
-                    this.onClickUploadedFileDelete();
-                    this.setState({ deleteButtonHover: false });
-                  }}
-                  onMouseEnter={() => this.setState({ deleteButtonHover: true })}
-                  onMouseLeave={() => this.setState({ deleteButtonHover: false })}
-                ><RxCross2 size='1.25rem' /></button>
+                <div style={{
+                  display: "flex",
+                  padding: "0.25rem",
+                  color: theme?.textColor,
+                  opacity: 0.6,
+                }}>
+                  <FaRegFile size='1.5rem' />
+                </div>
+
+                <div style={{
+                  display: "flex",
+                  WebkitBoxAlign: "center",
+                  alignItems: "center",
+                  flex: "1 1 0%",
+                  paddingLeft: "1rem",
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    marginRight: "0.5rem",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  }}>
+                    {this.state.file.name}
+                  </div>
+                  <small style={{ opacity: 0.6, lineHeight: 1.25 }}>
+                    {formatBytes(this.state.file.size)}
+                  </small>
+                  {this.state.uploading && (
+                    <div style={{
+                      padding: "0 1rem",
+                      margin: "0 auto",
+                      width: "60%",
+                    }}>
+                      <ProgressBar
+                        now={this.state.loadedChunks / this.getTotalChunks() * 100}
+                        visuallyHidden style={{ width: "100%" }} />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <button type="button"
+                    style={delete_btn_style}
+                    disabled={this.state.uploading}
+                    onClick={() => {
+                      this.onClickUploadedFileDelete();
+                      this.setState({ deleteButtonHover: false });
+                    }}
+                    onMouseEnter={() => this.setState({ deleteButtonHover: true })}
+                    onMouseLeave={() => this.setState({ deleteButtonHover: false })}
+                  ><RxCross2 size='1.25rem' /></button>
+                </div>
               </div>
             </div>
-          </div>
+          )
         )}
       </main>
     );
@@ -322,11 +411,19 @@ class FileUploader extends StreamlitComponentBase<State> {
 
   // Process dropped files
   private handleDrop = (files: FileList | null): void => {
+    const acceptMultipleFiles = this.props.args["accept_multiple_files"] || false;
     if (files && files.length > 0) {
-      const file = files[0];
-      this.setState({ file, loadedChunks: 0 }, () => {
-        this.uploadFile();
-      });
+      if (acceptMultipleFiles) {
+        const fileArray = Array.from(files);
+        this.setState({ files: fileArray, loadedChunks: 0 }, () => {
+          this.uploadFiles();
+        });
+      } else {
+        const file = files[0];
+        this.setState({ file, loadedChunks: 0 }, () => {
+          this.uploadFile();
+        });
+      }
     }
   };
 
@@ -345,13 +442,13 @@ class FileUploader extends StreamlitComponentBase<State> {
     return xsrf_token;
   };
 
-  private deleteUploadedFile = async (): Promise<void> => {
+  private deleteUploadedFile = async (fileId?: string): Promise<void> => {
     const endPoint = this.props.args["endpoint"];
     const sessionId = this.props.args["session_id"];
-    const fileId = this.state.fileId;
+    const targetFileId = fileId || this.state.fileId;
     const xsrfToken = this.getXsrftoken();
     try {
-      if (fileId) {
+      if (targetFileId) {
         const config: any = {
           baseURL: getStreamlitUrl(),
         };
@@ -360,21 +457,55 @@ class FileUploader extends StreamlitComponentBase<State> {
             'X-Xsrftoken': xsrfToken,
           };
         }
-        await axios.delete(`${endPoint}/${sessionId}/${fileId}`, config);
+        await axios.delete(`${endPoint}/${sessionId}/${targetFileId}`, config);
       }
     } finally {
-      this.setState({ fileId: null });
+      if (!fileId) {
+        this.setState({ fileId: null });
+      }
     }
   };
 
-  private onClickUploadedFileDelete = async (): Promise<void> => {
+  private onClickUploadedFileDelete = async (index?: number): Promise<void> => {
+    const acceptMultipleFiles = this.props.args["accept_multiple_files"] || false;
     try {
-      await this.deleteUploadedFile();
-    } finally {
-      this.setState({ file: null });
-      Streamlit.setComponentValue(null);
+      if (acceptMultipleFiles && index !== undefined) {
+        const fileId = this.state.fileIds[index];
+        await this.deleteUploadedFile(fileId);
+        const newFiles = [...this.state.files];
+        newFiles.splice(index, 1);
+        const newFileIds = [...this.state.fileIds];
+        newFileIds.splice(index, 1);
+        this.setState({ files: newFiles, fileIds: newFileIds });
+        
+        if (newFiles.length === 0) {
+          Streamlit.setComponentValue(null);
+        } else {
+          const filesData: FileData[] = newFiles.map((file, i) => ({
+            fileId: newFileIds[i],
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            totalChunks: Math.ceil(file.size / this.getChunkSize()),
+          }));
+          const sendData: SendData = {
+            fileId: newFileIds[0],
+            fileName: newFiles[0].name,
+            fileSize: newFiles[0].size,
+            fileType: newFiles[0].type,
+            totalChunks: Math.ceil(newFiles[0].size / this.getChunkSize()),
+            files: filesData,
+          };
+          Streamlit.setComponentValue(sendData);
+        }
+      } else {
+        await this.deleteUploadedFile();
+        this.setState({ file: null });
+        Streamlit.setComponentValue(null);
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error);
     }
-
   };
   private getChunkSize = (): number => {
     const maxFileSize = (this.props.args["chunk_size"] || this.DEFAULT_CHUNK_SIZE_MB) * 1024 * 1024;
@@ -382,20 +513,41 @@ class FileUploader extends StreamlitComponentBase<State> {
   };
 
   private getTotalChunks = (): number => {
-    const { file } = this.state;
-    if (file) {
-      const fileChunkSize = this.getChunkSize();
-      return Math.ceil(file.size / fileChunkSize);
+    const acceptMultipleFiles = this.props.args["accept_multiple_files"] || false;
+    if (acceptMultipleFiles) {
+      const { files } = this.state;
+      if (files.length > 0) {
+        const fileChunkSize = this.getChunkSize();
+        return files.reduce((total, file) => total + Math.ceil(file.size / fileChunkSize), 0);
+      }
+      return 0;
+    } else {
+      const { file } = this.state;
+      if (file) {
+        const fileChunkSize = this.getChunkSize();
+        return Math.ceil(file.size / fileChunkSize);
+      }
+      return 0;
     }
-    return 0;
   };
 
 
   private onFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = event.target.files?.[0] || null;
-    this.setState({ file, loadedChunks: 0 }, () => {
-      this.uploadFile();
-    });
+    const acceptMultipleFiles = this.props.args["accept_multiple_files"] || false;
+    if (acceptMultipleFiles) {
+      const fileList = event.target.files;
+      if (fileList && fileList.length > 0) {
+        const files = Array.from(fileList);
+        this.setState({ files, loadedChunks: 0 }, () => {
+          this.uploadFiles();
+        });
+      }
+    } else {
+      const file = event.target.files?.[0] || null;
+      this.setState({ file, loadedChunks: 0 }, () => {
+        this.uploadFile();
+      });
+    }
   };
 
   private uploadFile = async (): Promise<void> => {
@@ -519,6 +671,122 @@ class FileUploader extends StreamlitComponentBase<State> {
       this.setState({ uploading: false, fileId });
     }
     return Promise.resolve();
+  };
+
+  private uploadFiles = async (): Promise<void> => {
+    if (this.state.files.length === 0) {
+      return;
+    }
+
+    this.setState({ uploading: true });
+    const endPoint = this.props.args["endpoint"];
+    const sessionId = this.props.args["session_id"];
+    const fileChunkSize = this.getChunkSize();
+    const filesData: FileData[] = [];
+    const fileIds: string[] = [];
+
+    // Delete previously uploaded files
+    for (const oldFileId of this.state.fileIds) {
+      await this.deleteUploadedFile(oldFileId);
+    }
+
+    try {
+      // Upload each file sequentially
+      for (const file of this.state.files) {
+        const fileId = uuidv4();
+        fileIds.push(fileId);
+
+        if (file.size <= fileChunkSize) {
+          // Upload small file in one request
+          const formData = new FormData();
+          formData.append('sessionId', sessionId);
+          formData.append('file', file);
+          const xsrfToken = this.getXsrftoken();
+          const config: any = {
+            baseURL: getStreamlitUrl(),
+          };
+          if (xsrfToken) {
+            config.headers = {
+              'X-Xsrftoken': xsrfToken,
+            };
+          }
+          await axios.put(`${endPoint}/${sessionId}/${fileId}`, formData, config);
+          filesData.push({
+            fileId,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            totalChunks: 1,
+          });
+        } else {
+          // Upload large file in chunks
+          const totalChunks = Math.ceil(file.size / fileChunkSize);
+          const Parallels = (ps = new Set<Promise<unknown>>()) => ({
+            add: (p: Promise<unknown>) => ps.add(!!p.then(() => ps.delete(p)).catch(() => ps.delete(p)) && p),
+            wait: (limit: number) => ps.size >= limit && Promise.race(ps),
+            all: () => Promise.all(ps),
+          });
+          const ps = Parallels();
+
+          for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const start = chunkIndex * fileChunkSize;
+            const end = Math.min(start + fileChunkSize, file.size);
+            const chunk = file.slice(start, end);
+            const formData = new FormData();
+            formData.append('sessionId', sessionId);
+            formData.append('file', chunk);
+            const xsrfToken = this.getXsrftoken();
+            const config: any = {
+              baseURL: getStreamlitUrl(),
+            };
+            if (xsrfToken) {
+              config.headers = {
+                'X-Xsrftoken': xsrfToken,
+              };
+            }
+            const axiosInstance = axios.create(config);
+            ps.add(
+              axiosInstance.put(`${endPoint}/${sessionId}/${fileId}.${chunkIndex}`, formData)
+                .then(response => {
+                  this.setState(prevState => ({
+                    loadedChunks: prevState.loadedChunks + 1
+                  }));
+                  return response.data;
+                })
+                .catch(error => {
+                  throw error;
+                })
+            );
+            await ps.wait(this.MAX_PARALLEL_UPLOADS);
+          }
+          await ps.all();
+          
+          filesData.push({
+            fileId,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            totalChunks,
+          });
+        }
+      }
+
+      // Send all file information to Streamlit
+      const sendData: SendData = {
+        fileId: fileIds[0],
+        fileName: this.state.files[0].name,
+        fileSize: this.state.files[0].size,
+        fileType: this.state.files[0].type,
+        totalChunks: filesData[0].totalChunks,
+        files: filesData,
+      };
+      Streamlit.setComponentValue(sendData);
+      this.setState({ fileIds });
+    } catch (error) {
+      console.error('Upload error:', error);
+    } finally {
+      this.setState({ uploading: false });
+    }
   };
 
 }

@@ -1,6 +1,6 @@
 from streamlit import util
 import io
-from typing import Optional
+from typing import Optional, List
 from ._utils import convert_keys_to_snake_case
 from dataclasses import dataclass
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
@@ -35,18 +35,31 @@ class UploadedFile(io.BytesIO):
 
 
 @dataclass
-class ChunkUploaderReturnValue:
+class FileInfo:
     file_id: str
     file_name: str
     file_size: int
     file_type: str
     total_chunks: Optional[int] = None
 
+
+@dataclass
+class ChunkUploaderReturnValue:
+    file_id: str
+    file_name: str
+    file_size: int
+    file_type: str
+    total_chunks: Optional[int] = None
+    files: Optional[List[FileInfo]] = None
+
     @staticmethod
     def from_component_value(conponent_value: dict):
         try:
-            return ChunkUploaderReturnValue(
-                **convert_keys_to_snake_case(conponent_value)
-            )
+            data = convert_keys_to_snake_case(conponent_value)
+            # Handle multiple files if present
+            if 'files' in data and data['files']:
+                file_infos = [FileInfo(**convert_keys_to_snake_case(f)) for f in data['files']]
+                data['files'] = file_infos
+            return ChunkUploaderReturnValue(**data)
         except:
             return None
