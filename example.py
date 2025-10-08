@@ -21,6 +21,27 @@ def index() -> None:
             file_name=file.name,
             type="primary",
         )
+    
+    # Multiple files uploader example
+    st.subheader("ChunkUploader (Multiple Files)", divider=True)
+    files = uploader(
+        "Upload multiple files",
+        key="chunk_uploader_multiple",
+        uploader_msg="Drag and drop multiple files here",
+        chunk_size=31,
+        accept_multiple_files=True,
+    )
+    st.write(files)
+    if files is not None and len(files) > 0:
+        for idx, file in enumerate(files):
+            st.download_button(
+                f"download {file.name}",
+                data=file,
+                file_name=file.name,
+                type="primary",
+                key=f"download_btn_{idx}",
+            )
+    
     # streamlit file_uploader example.
     st.subheader("st.file_uploader",divider=True)
     file_2 = st.file_uploader(
