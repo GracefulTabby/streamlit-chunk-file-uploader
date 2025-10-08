@@ -27,6 +27,7 @@ interface State {
   uploading: boolean;
   buttonHover: boolean;
   deleteButtonHover: boolean;
+  fileSizeError: boolean;
 }
 
 function getCookie(name: string): string {
@@ -82,10 +83,27 @@ class FileUploader extends StreamlitComponentBase<State> {
     uploading: false,
     buttonHover: false,
     deleteButtonHover: false,
+    fileSizeError: false,
   };
 
   private readonly DEFAULT_CHUNK_SIZE_MB = 32;
   private readonly MAX_PARALLEL_UPLOADS = 4;
+
+  private getMaxFileSize = (): number | null => {
+    const maxFileSizeMB = this.props.args["max_file_size"];
+    if (maxFileSizeMB === null || maxFileSizeMB === undefined) {
+      return null;
+    }
+    return maxFileSizeMB * 1024 * 1024; // Convert MB to bytes
+  };
+
+  private getFileSizeLimitText = (): string => {
+    const maxFileSizeMB = this.props.args["max_file_size"];
+    if (maxFileSizeMB === null || maxFileSizeMB === undefined) {
+      return "File size limit: unlimited";
+    }
+    return `File size limit: ${maxFileSizeMB}MB`;
+  };
 
   public render = (): ReactNode => {
     const { theme } = this.props;
@@ -222,7 +240,7 @@ class FileUploader extends StreamlitComponentBase<State> {
               <small style={{
                 color: theme?.textColor,
                 opacity: 0.6,
-              }}>File size limit: unlimited</small>
+              }}>{this.getFileSizeLimitText()}</small>
             </div>
           </div>
           <button type="button" style={browse_btn_style}
@@ -233,6 +251,16 @@ class FileUploader extends StreamlitComponentBase<State> {
             Browse files
           </button>
         </form>
+        {this.state.fileSizeError && (
+          <div style={{
+            color: "#ff2b2b",
+            fontSize: "0.875rem",
+            marginTop: "0.5rem",
+            padding: "0.5rem 1rem",
+          }}>
+            ⚠️ File size exceeds the maximum allowed limit of {this.props.args["max_file_size"]}MB
+          </div>
+        )}
         {this.state.file && (
           <div style={{
             left: 0,
@@ -324,7 +352,12 @@ class FileUploader extends StreamlitComponentBase<State> {
   private handleDrop = (files: FileList | null): void => {
     if (files && files.length > 0) {
       const file = files[0];
-      this.setState({ file, loadedChunks: 0 }, () => {
+      const maxFileSize = this.getMaxFileSize();
+      if (maxFileSize !== null && file.size > maxFileSize) {
+        this.setState({ fileSizeError: true, file: null });
+        return;
+      }
+      this.setState({ file, loadedChunks: 0, fileSizeError: false }, () => {
         this.uploadFile();
       });
     }
@@ -371,7 +404,7 @@ class FileUploader extends StreamlitComponentBase<State> {
     try {
       await this.deleteUploadedFile();
     } finally {
-      this.setState({ file: null });
+      this.setState({ file: null, fileSizeError: false });
       Streamlit.setComponentValue(null);
     }
 
@@ -393,9 +426,16 @@ class FileUploader extends StreamlitComponentBase<State> {
 
   private onFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0] || null;
-    this.setState({ file, loadedChunks: 0 }, () => {
-      this.uploadFile();
-    });
+    if (file) {
+      const maxFileSize = this.getMaxFileSize();
+      if (maxFileSize !== null && file.size > maxFileSize) {
+        this.setState({ fileSizeError: true, file: null });
+        return;
+      }
+      this.setState({ file, loadedChunks: 0, fileSizeError: false }, () => {
+        this.uploadFile();
+      });
+    }
   };
 
   private uploadFile = async (): Promise<void> => {

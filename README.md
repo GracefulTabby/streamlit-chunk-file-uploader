@@ -29,6 +29,21 @@ if file is not None:
 
 ```
 
+### With file size limit
+
+You can set a maximum file size limit (in MB) for uploads:
+
+```python
+file = uploader(
+    "uploader with 100MB limit", 
+    key="chunk_uploader_limited", 
+    chunk_size=32,
+    max_file_size=100  # Limit to 100MB
+)
+```
+
+If `max_file_size` is not specified or set to `None`, there is no file size limit (unlimited).
+
 ## About chunk size
 When a file is uploaded, a Python script slices the file at the specified chunk size on the browser side and sends it as multiple files to the backend.  
 It's important to note that chunk size and request size are different.  
