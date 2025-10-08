@@ -21,6 +21,26 @@ def index() -> None:
             file_name=file.name,
             type="primary",
         )
+    
+    # Example with file size limit
+    st.subheader("ChunkUploader with 10MB limit",divider=True)
+    file_limited = uploader(
+        "chunk file uploader (10MB Limit)",
+        key="chunk_uploader_limited",
+        uploader_msg="Drag and drop file here (max 10MB)",
+        chunk_size=5,
+        max_file_size=10,
+    )
+    st.write(file_limited)
+    if file_limited is not None:
+        st.download_button(
+            "download (limited)",
+            data=file_limited,
+            file_name=file_limited.name,
+            type="primary",
+            key="download_limited",
+        )
+    
     # streamlit file_uploader example.
     st.subheader("st.file_uploader",divider=True)
     file_2 = st.file_uploader(

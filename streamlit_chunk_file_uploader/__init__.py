@@ -93,6 +93,7 @@ def uploader(
     label_visibility: Literal["visible", "hidden", "collapsed"] = "visible",
     chunk_size: int = 32,
     uploader_msg: str = "Drag and drop file here",
+    max_file_size: Optional[int] = None,
 ) -> Optional[UploadedFile]:
     """Create a new instance of the file uploader component.
 
@@ -125,6 +126,9 @@ def uploader(
     uploader_msg: str, optional
         The message displayed in the file uploader, prompting users to browse
         and upload files.
+    max_file_size: int, optional
+        The maximum file size in MB that can be uploaded. If None, there is no
+        limit (unlimited). Default is None.
 
     Returns
     -------
@@ -144,6 +148,7 @@ def uploader(
         accept=generate_accept_string(type),
         uploader_msg=uploader_msg,
         chunk_size=chunk_size,
+        max_file_size=max_file_size,
         key=_CV_KEY,
         disabled=disabled,
         label_visibility=label_visibility,
