@@ -8,6 +8,7 @@ import {
 import { MdOutlineCloudUpload } from 'react-icons/md'
 import { RxCross2 } from "react-icons/rx";
 import { FaRegFile } from 'react-icons/fa';
+import { AiOutlineInfoCircle } from 'react-icons/ai';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 
@@ -27,6 +28,7 @@ interface State {
   uploading: boolean;
   buttonHover: boolean;
   deleteButtonHover: boolean;
+  showHelpTooltip: boolean;
 }
 
 function getCookie(name: string): string {
@@ -82,6 +84,7 @@ class FileUploader extends StreamlitComponentBase<State> {
     uploading: false,
     buttonHover: false,
     deleteButtonHover: false,
+    showHelpTooltip: false,
   };
 
   private readonly DEFAULT_CHUNK_SIZE_MB = 32;
@@ -180,10 +183,64 @@ class FileUploader extends StreamlitComponentBase<State> {
     };
 
     const fileInputRef = React.createRef<HTMLInputElement>();
+    const helpText = this.props.args["help"];
+    
     return (
       <main style={{ fontFamily: theme?.font }}>
         {labelVisibility !== "collapsed" && (
-          <p style={label_style}>{label}</p>
+          <div style={label_style}>
+            <span>{label}</span>
+            {helpText && (
+              <div style={{ 
+                position: "relative", 
+                display: "inline-block",
+                marginLeft: "0.5rem"
+              }}>
+                <span
+                  onMouseEnter={() => this.setState({ showHelpTooltip: true })}
+                  onMouseLeave={() => this.setState({ showHelpTooltip: false })}
+                  style={{ 
+                    cursor: "help",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}
+                >
+                  <AiOutlineInfoCircle size={16} style={{ opacity: 0.6 }} />
+                </span>
+                {this.state.showHelpTooltip && (
+                  <div style={{
+                    position: "absolute",
+                    bottom: "100%",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    marginBottom: "0.5rem",
+                    padding: "0.5rem 0.75rem",
+                    backgroundColor: theme?.backgroundColor,
+                    color: theme?.textColor,
+                    border: `1px solid rgba(128, 128, 128, 0.2)`,
+                    borderRadius: "0.25rem",
+                    fontSize: "0.875rem",
+                    whiteSpace: "nowrap",
+                    zIndex: 1000,
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                  }}>
+                    {helpText}
+                    <div style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 0,
+                      height: 0,
+                      borderLeft: "6px solid transparent",
+                      borderRight: "6px solid transparent",
+                      borderTop: `6px solid ${theme?.backgroundColor}`,
+                    }} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
         <form style={form_style}
           onClick={() => {

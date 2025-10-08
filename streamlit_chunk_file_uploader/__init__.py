@@ -108,7 +108,8 @@ def uploader(
         allows the component to maintain state across re-renders. If None, the
         component will be re-mounted, losing its current state on changes.
     help: str, optional
-        [NOT YET IMPLEMENTED] Additional help or description for the file uploader.
+        Additional help or description for the file uploader. Displayed as a
+        tooltip when hovering over the help icon next to the label.
     on_change: Callable, optional
         A callback function to be invoked when the files are changed or uploaded.
     args: Tuple[Any, ...], optional
@@ -147,6 +148,7 @@ def uploader(
         key=_CV_KEY,
         disabled=disabled,
         label_visibility=label_visibility,
+        help=help,
         default=None,
         session_id=session_id,
         endpoint=endpoint,
